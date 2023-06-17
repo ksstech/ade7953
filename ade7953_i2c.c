@@ -50,7 +50,11 @@ int ade7953WriteI2C(ade7953_t * psADE7953, u16_t Reg, u8_t Size, i32_t Val) {
 	while (Size--)
 		caBuf[Len++] = (Val >> (8 * Size)) & 0xFF;		// correct LE -> LE conversion
 	IF_EXEC_1(debugTIMING, xSysTimerStart, stADE7953W);
-	int iRV = halI2CM_Queue(psADE7953->psI2C, i2cW_D, caBuf, Len, NULL, 0, (i2cq_p1_t)NULL, (i2cq_p2_t)NULL);
+	int iRV = halI2CM_Queue(psADE7953->psI2C,
+			i2cW_D,
+			caBuf, Len,
+			NULL, 0,
+			(i2cq_p1_t)NULL, (i2cq_p2_t)NULL);
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953W);
 	return iRV;
 }
@@ -61,7 +65,11 @@ int ade7953ReadI2C(ade7953_t * psADE7953, u16_t Reg, u8_t Size, u8_t * pVal) {
 	caBuf[0] = (Reg >> 8) & 0xFF;
 	caBuf[1] = Reg & 0xFF;
 	IF_EXEC_1(debugTIMING, xSysTimerStart, stADE7953R);
-	int iRV = halI2CM_Queue(psADE7953->psI2C, psADE7953->CallBack ? i2cWRC_F : i2cWR_BD, caBuf, 2, pVal, Size, (i2cq_p1_t)psADE7953->CallBack, (i2cq_p2_t) (void *)psADE7953);
+	int iRV = halI2CM_Queue(psADE7953->psI2C,
+			psADE7953->CallBack ? i2cWRC_F : i2cWR_BD,
+			caBuf, sizeof(caBuf),
+			pVal, Size,
+			(i2cq_p1_t)psADE7953->CallBack, (i2cq_p2_t) (void *)psADE7953);
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953R);
 	return iRV;
 }
