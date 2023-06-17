@@ -229,8 +229,47 @@ void ade7953ReportAdjust(void) { }
 void ade7953ReportData(void) { }
 
 void ade7953ReportStatus(report_t * psRprt, ade7953_t * psADE7953) {
-	wprintfx(psRprt, "IRQA: EN=0x%06X STAT==0x%06X", psADE7953->sIRQENA, psADE7953->sIRQSTATA);
-	wprintfx(psRprt, "IRQB: EN=0x%06X STAT==0x%06X", psADE7953->sIRQENB, psADE7953->sIRQSTATB);
+const char caStat1[] = "AEHFx=%d VAREHFx=%d VAEHFx=%d AEOFx=%d VAREOFx=%d VAEOFA=%d AP_NOLOADA=%d";
+const char caStat2[] = "VAR_NOLOADx=%d VA_NOLOADx=%d APSIGNx=%d VARSIGNx=%d ZXTO_Ix=%d ZXIx=%d OIx=%d";
+const char caStat3[] = "ZXTO=%d ZXV=%d OV=%d WSMP=%d CYCEND=%d SAG=%d RESET=%d CRC=%d";
+	wprintfx(psRprt, "IRQA: EN=0x%06X STAT==0x%06X", psADE7953->sIRQENA.val, psADE7953->sIRQSTATA.val);
+	wprintfx(psRprt, caStat1, psADE7953->sIRQSTATA.AEHFA,
+								psADE7953->sIRQSTATA.VAREHFA,
+								psADE7953->sIRQSTATA.VAEHFA,
+								psADE7953->sIRQSTATA.AEOFA,
+								psADE7953->sIRQSTATA.VAREOFA,
+								psADE7953->sIRQSTATA.VAEOFA,
+								psADE7953->sIRQSTATA.AP_NOLOADA);
+	wprintfx(psRprt, caStat2, psADE7953->sIRQSTATA.VAR_NOLOADA,
+								psADE7953->sIRQSTATA.VA_NOLOADA,
+								psADE7953->sIRQSTATA.APSIGN_A,
+								psADE7953->sIRQSTATA.VARSIGN_A,
+								psADE7953->sIRQSTATA.ZXTO_IA,
+								psADE7953->sIRQSTATA.ZXIA,
+								psADE7953->sIRQSTATA.OIA);
+	wprintfx(psRprt, caStat3, psADE7953->sIRQSTATA.ZXTO,
+								psADE7953->sIRQSTATA.ZXV,
+								psADE7953->sIRQSTATA.OV,
+								psADE7953->sIRQSTATA.WSMP,
+								psADE7953->sIRQSTATA.CYCEND,
+								psADE7953->sIRQSTATA.SAG,
+								psADE7953->sIRQSTATA.RESET,
+								psADE7953->sIRQSTATA.CRC);
+	wprintfx(psRprt, "IRQB: EN=0x%06X STAT==0x%06X", psADE7953->sIRQENB.val, psADE7953->sIRQSTATB.val);
+	wprintfx(psRprt, caStat1, psADE7953->sIRQSTATB.AEHFB,
+								psADE7953->sIRQSTATB.VAREHFB,
+								psADE7953->sIRQSTATB.VAEHFB,
+								psADE7953->sIRQSTATB.AEOFB,
+								psADE7953->sIRQSTATB.VAREOFB,
+								psADE7953->sIRQSTATB.VAEOFB,
+								psADE7953->sIRQSTATB.AP_NOLOADB);
+	wprintfx(psRprt, caStat2, psADE7953->sIRQSTATB.VAR_NOLOADB,
+								psADE7953->sIRQSTATB.VA_NOLOADB,
+								psADE7953->sIRQSTATB.APSIGN_B,
+								psADE7953->sIRQSTATB.VARSIGN_B,
+								psADE7953->sIRQSTATB.ZXTO_IB,
+								psADE7953->sIRQSTATB.ZXIB,
+								psADE7953->sIRQSTATB.OIB);
 }
 
 void ade7953Report(void) { }
