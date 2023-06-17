@@ -197,8 +197,8 @@ typedef union {
 		u8_t	SPARE : 2;			// MSB
 	};
 	struct __attribute__((packed)) { u32_t val : 24; };
-} ade7953irqstata_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953irqstata_t) == 3);
+} ade7953irqa_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953irqa_t) == 3);
 
 typedef union {
 	struct __attribute__((packed)) {
@@ -219,8 +219,8 @@ typedef union {
 		u16_t	SPARE : 10;			// MSB
 	};
 	struct __attribute__((packed)) { u32_t val : 24; };
-} ade7953irqstatb_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953irqstatb_t) == 3);
+} ade7953irqb_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953irqb_t) == 3);
 
 typedef struct __attribute__((packed)) ade7953nvs_t {
 	f32_t	CalibV;
@@ -236,10 +236,10 @@ typedef struct __attribute__((packed)) ade7953_t {
 	#endif
 	// device register storage
 	ade7953config_t sCONFIG;
-	ade7953irqstata_t sIRQENA;
-	ade7953irqstata_t sIRQSTATA;
-	ade7953irqstatb_t sIRQENB;
-	ade7953irqstatb_t sIRQSTATB;
+	ade7953irqa_t sIRQENA;
+	ade7953irqa_t sIRQSTATA;
+	ade7953irqb_t sIRQENB;
+	ade7953irqb_t sIRQSTATB;
 	// non register storage
 	void (*CallBack)(void *);
 	ade7953nvs_t sCurCalib;
