@@ -97,7 +97,6 @@ int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pVal) {
  */
 void IRAM_ATTR ade7953IRQ_CB(void * Arg) {
 	ade7953_t * psADE7953 = (ade7953_t *) Arg;
-	psADE7953->CallBack = NULL;
 	ade7953ReportStatus(NULL, psADE7953);
 }
 
@@ -110,8 +109,12 @@ void IRAM_ATTR ade7953IntHandler(void * Arg) {
 	u8_t eDev = (int) Arg;
 	IF_myASSERT(debugPARAM, eDev < halHAS_ADE7953);
 	ade7953_t * psADE7953 = &sADE7953[eDev];
-	psADE7953->CallBack = ade7953IRQ_CB;
-	ade7953Read(psADE7953, ade7953REG_IRQSTATA, &psADE7953->sIRQSTATA);
+	// schedule 1st read, just to update in SRAM
+	ade7953Read(psADE7953, ade7953REG_IRQSTATA, &psADE7953->sIRQSTATA);	// read RSTIRQSTATA to reset?
+	// schedule 2nd read with callback handler
+	psADE7953->CallBack = ade7953IRQ_CB;				// preload callback address
+	ade7953Read(psADE7953, ade7953REG_IRQSTATB, &psADE7953->sIRQSTATB);	// read RSTIRQSTATB to reset?
+	psADE7953->CallBack = NULL;							// reset callback address
 }
 
 /*int	ade7953LoadNVSConfig(u8_t eChan, u8_t Idx) {
