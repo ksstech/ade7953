@@ -71,11 +71,11 @@ int ade7953CalcRegSize(u16_t Reg) {
 int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t Val) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953));
 	int iRV, Size = ade7953CalcRegSize(Reg);
-#if (ade7953USE_I2C == 1)
+	#if (ade7953USE_I2C == 1)
 	iRV = ade7953WriteI2C(psADE7953, Reg, Size, Val);
-#elif (ade7953USE_SPI == 1)
+	#elif (ade7953USE_SPI == 1)
 	iRV = ade7953WriteSPI(psADE7953, Reg, Size, Val);
-#endif
+	#endif
 	if ((iRV < erSUCCESS) && !(Reg == ade7953REG_CONFIG && (Val & ade7953REG_CONFIG_SWRST)))
 		SL_ERR("Error Reg=0x%X iRV=%d", Reg, iRV);
 	return iRV;
@@ -93,6 +93,9 @@ int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pVal) {
 	return iRV;
 }
 
+/*
+ * @brief	Callback handler after reading both IRQSTATA & IRQSTATB
+ */
 void IRAM_ATTR ade7953IRQ_CB(void * Arg) {
 	ade7953_t * psADE7953 = (ade7953_t *) Arg;
 	psADE7953->CallBack = NULL;
