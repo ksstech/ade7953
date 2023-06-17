@@ -84,12 +84,11 @@ int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t Val) {
 int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pVal) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953));
 	int iRV, Size = ade7953CalcRegSize(Reg);
-	u8_t Data[4] = {0};
-#if (ade7953USE_I2C == 1)
-	iRV = ade7953ReadI2C(psADE7953, Reg, Size, Data);
-#elif (ade7953USE_SPI == 1)
-	iRV = ade7953ReadSPI(psADE7953, Reg, Size, Data);
-#endif
+	#if (ade7953USE_I2C == 1)
+	iRV = ade7953ReadI2C(psADE7953, Reg, Size, pVal);
+	#elif (ade7953USE_SPI == 1)
+	iRV = ade7953ReadSPI(psADE7953, Reg, Size, pVal);
+	#endif
 	return iRV;
 }
 
