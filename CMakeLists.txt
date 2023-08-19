@@ -1,6 +1,6 @@
 # ADE7953
 
-set( srcs "ade7953.c" "ade7953_i2c.c" "ade7953_spi.c" )
+set( srcs "ade7953.c" )
 set( include_dirs "." )
 set( priv_include_dirs )
 set( requires common hal_esp32 nvs_flash rules )
