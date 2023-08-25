@@ -48,8 +48,8 @@ extern "C" {
 #define regCF1DEN			0x103				// rw	u16	0x003F
 #define regCF2DEN			0x104				// rw	u16	0x003F
 #define regCFMODE			0x107				// rw	u16	0x0300
-#define regPHCALA			0x108				// rw	u16	0
-#define regPHCALB			0x109				// rw	u16	0
+#define regPHCALA			0x108				// rw	u16	0			CALIB
+#define regPHCALB			0x109				// rw	u16	0			CALIB
 #define regPFA				0x10A				// ro	i16	0
 #define regPFB				0x10B				// ro	i16	0
 #define regANGLE_A			0x10C				// ro	i16	0
@@ -97,21 +97,21 @@ extern "C" {
 #define regIRQENB			0x22F				// rw	u24	0x100000
 #define regIRQSTATB			0x230				// ro	u24	0
 #define regRSTIRQSTATB		0x231				// ro	u24	0
-#define regAIGAIN			0x280				// rw	u24	0x400000
-#define regAVGAIN			0x281				// rw	u24	0x400000
-#define regAWGAIN			0x282				// rw	u24	0x400000
-#define regAVARGAIN			0x283				// rw	u24	0x400000
-#define regAVAGAIN			0x284				// rw	u24	0x400000
+#define regAIGAIN			0x280				// rw	u24	0x400000	CALIB
+#define regAVGAIN			0x281				// rw	u24	0x400000	CALIB
+#define regAWGAIN			0x282				// rw	u24	0x400000	CALIB
+#define regAVARGAIN			0x283				// rw	u24	0x400000	CALIB
+#define regAVAGAIN			0x284				// rw	u24	0x400000	CALIB
 #define regAIRMSOS			0x286				// rw	i24	0x000000
 #define regVRMSOS			0x288				// rw	i24	0x000000
 #define regAWATTOS			0x289				// rw	i24	0x000000
 #define regAVAROS			0x28A				// rw	i24	0x000000
 #define regAVASOS			0x28B				// rw	i24	0x000000
-#define regBIGAIN			0x28C				// rw	u24	0x400000
-#define regBVGAIN			0x28D				// rw	u24	0x400000
-#define regBWGAIN			0x28E				// rw	u24	0x400000
-#define regBVARGAIN			0x28F				// rw	u24	0x400000
-#define regBVAGAIN			0x290				// rw	u24	0x400000
+#define regBIGAIN			0x28C				// rw	u24	0x400000	CALIB
+#define regBVGAIN			0x28D				// rw	u24	0x400000	CALIB
+#define regBWGAIN			0x28E				// rw	u24	0x400000	CALIB
+#define regBVARGAIN			0x28F				// rw	u24	0x400000	CALIB
+#define regBVAGAIN			0x290				// rw	u24	0x400000	CALIB
 #define regBIRMSOS			0x292				// rw	i24	0x000000
 #define regBWATTOS			0x295				// rw	i24	0x000000
 #define regBVAROS			0x296				// rw	i24	0x000000
@@ -123,6 +123,7 @@ extern "C" {
 #define regEX_REF			0x800				// rw	u8	0
 
 #define regCONFIG_SWRST		(1 << 7)
+
 // ######################################## Enumerations ###########################################
 
 enum ade7953_gain {
@@ -136,19 +137,19 @@ enum ade7953_gain {
 
 // ######################################### Structures ############################################
 
-typedef union { u8_t ap:1; u8_t var:1; u8_t va:1; u8_t spare:5; } ade7953dnl_t; // 8bit DISNOLOAD register
+typedef union {
+	struct  __attribute__((packed)) { u8_t ap:1; u8_t var:1; u8_t va:1; u8_t spare:5; };
+	u8_t val;
+} ade7953dnl_t; // 8bit DISNOLOAD register
 DUMB_STATIC_ASSERT(sizeof(ade7953dnl_t) == 1);
 
 typedef union {
-	u8_t alwatt:1;
-	u8_t blwatt:1;
-	u8_t alvar:1;
-	u8_t blvar:1;
-	u8_t alva:1;
-	u8_t blva:1;
-	u8_t spare:2;
-} ade7953LCM_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953dnl_t) == 1);
+	struct __attribute__((packed)) {
+		u8_t alwatt:1; u8_t blwatt:1; u8_t alvar:1; u8_t blvar:1; u8_t alva:1; u8_t blva:1; u8_t rstr:1; u8_t spare:1;
+	};
+	u8_t val;
+} ade7953lcm_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953lcm_t) == 1);
 
 typedef union {						// 16bit CONFIG register
 	struct __attribute__((packed)) {
@@ -171,42 +172,28 @@ typedef union {						// 16bit CONFIG register
 } ade7953config_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953config_t) == 2);
 
-typedef struct __attribute__((packed)) {
-	u8_t cf1sel:4;
-	u8_t cf2sel:4;
-	u8_t cf1dis:1;
-	u8_t cf2dis:1;
-	u8_t spare:6;
+typedef union {
+	struct __attribute__((packed)) { u8_t cf1sel:4; u8_t cf2sel:4; u8_t cf1dis:1; u8_t cf2dis:1; u8_t spare:6; };
+	u16_t val;
 } ade7953cfmode_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953cfmode_t) == 2);
 
-typedef struct __attribute__((packed)) {
-	u8_t zx_alt:4;
-	u8_t zxi_alt:4;
-	u8_t revp_alt:4;
-	u8_t spare:4;
+typedef union {
+	struct __attribute__((packed)) { u8_t zx_alt:4; u8_t zxi_alt:4; u8_t revp_alt:4; u8_t spare:4; };
+	u16_t val;
 } ade7953alt_out_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953alt_out_t) == 2);
 
-typedef struct __attribute__((packed)) {
-	u8_t awattacc:2;
-	u8_t bwattacc:2;
-	u8_t avaracc:2;
-	u8_t bvaracc:2;
-	u8_t avaacc:1;
-	u8_t bvaacc:1;
-	u8_t aapsign:1;
-	u8_t bapsign:1;
-	u8_t avarsign:1;
-	u8_t bvarsign:1;
-	u8_t rsvd1:2;
-	u8_t aactnl:1;
-	u8_t avanl:1;
-	u8_t avarnl:1;
-	u8_t bactnl:1;
-	u8_t bvanl:1;
-	u8_t bvarnl:1;
-	u8_t rsvd2:2;
+typedef union {
+	struct __attribute__((packed)) {
+	u8_t awattacc:2;	u8_t bwattacc:2;
+	u8_t avaracc:2;		u8_t bvaracc:2;
+	u8_t avaacc:1;		u8_t bvaacc:1;		u8_t aapsign:1;		u8_t bapsign:1;
+	u8_t avarsign:1;	u8_t bvarsign:1;	u8_t rsvd1:2;
+	u8_t aactnl:1;		u8_t avanl:1;		u8_t avarnl:1;		u8_t bactnl:1;
+	u8_t bvanl:1;		u8_t bvarnl:1;		u8_t rsvd2:2;
+	};
+	x24_t val;
 } ade7953accmode_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953accmode_t) == 3);
 
@@ -264,56 +251,41 @@ typedef union {						// 24bit IRQENB / IRQSTATB registers
 } ade7953irqb_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953irqb_t) == 3);
 
-typedef union {						// 24bit sensor structure
-	struct __attribute__((packed)) { u32_t U24 : 24; };
-	struct __attribute__((packed)) { i32_t I24 : 24; };
-	u8_t U8[3];
-} ade7953x24_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953x24_t) == 3);
-
-typedef union { u16_t U16; i16_t I16; u8_t U8[2]; } ade7953x16_t;	// 16bit sensor structure
-DUMB_STATIC_ASSERT(sizeof(ade7953x16_t) == 2);
-
-typedef struct ade7953nvs_t { i32_t val[ade7953NUM_CHAN * 6]; } ade7953nvs_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953nvs_t) == (ade7953NUM_CHAN * 24));
-
-typedef struct __attribute__((packed)) ade7953X_t {
-	struct __attribute__((packed)) {
-		u8_t Gain0;										// 1 -> 22
-		u8_t Gain1;										// 1 -> 16
-	};
-} ade7953X_t;
+typedef struct __attribute__((packed)) {				// Registers NOT related to endpoints
+	ade7953irqa_t ie_a, is_a;		// 6
+	#if	(ade7953USE_CH2 > 0)							// Line 2 / Neutral
+	ade7953irqb_t ie_b, is_b;		// 6
+	#endif
+	ade7953config_t cfg;			// 2
+	ade7953cfmode_t cfmode;			// 2
+	ade7953alt_out_t alt_out;		// 2
+	ade7953accmode_t accmode;		// 3
+	ade7953dnl_t disnoload;			// 1
+	ade7953lcm_t lcycmode;			// 1
+	u8_t ver;
+} reg_oth_t;
 
 typedef union {											// 24bit sensor registers
 	struct __attribute__((packed)) {
-		ade7953x24_t ae_a, re_a, ape_a, pw_a, pva_a, pvar_a, irms_a;
+		x24_t ae_a, re_a, ape_a, pw_a, pva_a, pvar_a, irms_a;
 		#if	(ade7953USE_CH2 > 0)						// Line 2 / Neutral
-		ade7953x24_t ae_b, re_b, ape_b, pw_b, pva_b, pvar_b, irms_b;
+		x24_t ae_b, re_b, ape_b, pw_b, pva_b, pvar_b, irms_b;
 		#endif
-		ade7953x24_t vrms;
+		x24_t vrms;
 	};
-	ade7953x24_t ep_x[ade7953NUM_SEN24];
+	x24_t ep_x[ade7953NUM_SEN24];
 } r24_ep_t;
 
 typedef union {											// 16bit sensor registers
 	struct __attribute__((packed)) {
-		ade7953x16_t pf_a, angle_a;
+		x16_t pf_a, angle_a;
 		#if	(ade7953USE_CH2 > 0)						// Line 2 / Neutral
-		ade7953x16_t pf_b, angle_b;
+		x16_t pf_b, angle_b;
 		#endif
-		ade7953x16_t per;
+		x16_t per;
 	};
-	ade7953x16_t ep_x[ade7953NUM_SEN16];
+	x16_t ep_x[ade7953NUM_SEN16];
 } r16_ep_t;
-
-typedef struct __attribute__((packed)) {				// Registers NOT related to endpoints
-	ade7953irqa_t ie_a, is_a;
-	#if	(ade7953USE_CH2 > 0)							// Line 2 / Neutral
-	ade7953irqb_t ie_b, is_b;
-	#endif
-	ade7953config_t cfg;
-	u8_t ver;
-} reg_oth_t;
 
 typedef struct __attribute__((packed)) {
 	i2c_di_t * psI2C;
@@ -324,6 +296,35 @@ typedef struct __attribute__((packed)) {
 	r16_ep_t ep16;
 } ade7953_t;
 
+typedef struct { i32_t val[ade7953NUM_CHAN * 6]; } ade7953nvs_t;
+
+DUMB_STATIC_ASSERT(sizeof(ade7953nvs_t) == (ade7953NUM_CHAN * 24));
+
+/*
+typedef struct {
+	f32_t Vscale;
+	f32_t Vofst;
+	f32_t Iscale0;
+	f32_t Iscale1;
+	f32_t Iosft0;
+	f32_t Iofst1;
+	f32_t Pscale0
+	f32_t Pscale1;
+	f32_t Escale0;
+	f32_t Escale1;
+	f32_t Vgain;
+	f32_t Igain0;
+	f32_t Igain1;
+} ade7953nvs_t;
+*/
+
+typedef struct __attribute__((packed)) ade7953X_t {
+	struct __attribute__((packed)) {
+		u8_t Gain0;										// 1 -> 22
+		u8_t Gain1;										// 1 -> 16
+	};
+} ade7953X_t;
+
 // ####################################### Global variables ########################################
 
 extern u8_t NumADE7953;
@@ -332,27 +333,19 @@ extern ade7953nvs_t ade7953nvs[halHAS_ADE7953];
 
 // ####################################### Global functions ########################################
 
+int ade7953CalcRegSize(u16_t Reg);
 int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t Val);
 int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pVal);
+int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pVal, u32_t ANDmask, u32_t ORmask);
 u16_t ade7953ReadConfig(ade7953_t * psADE7953);
-
-#if(ade7953USE_I2C > 0)
-int ade7953WriteI2C(ade7953_t * psADE7953, u16_t Reg, u8_t Size, i32_t Val);
-int ade7953ReadI2C(ade7953_t * psADE7953, u16_t Reg, u8_t Size, u8_t * pVal);
-#elif (ade7953USE_SPI > 0)
-int ade7953WriteSPI(ade7953_t * psADE7953, u16_t Reg, u8_t Size, i32_t Val);
-int ade7953ReadSPI(ade7953_t * psADE7953, u16_t Reg, u8_t Size, u8_t * pVal);
-#endif
-
-int	ade7953LoadNVSConfig(u8_t eChan, u8_t Idx);
 
 int	ade7953Identify(i2c_di_t * psI2C);
 int ade7953Config(i2c_di_t * psI2C);
 int ade7953ReConfig(i2c_di_t * psI2C);
+int	ade7953LoadNVSConfig(u8_t eChan, u8_t Idx);
 
-
-void ade7953ReportStatus(report_t * psRprt, ade7953_t * psADE7953);
-void ade7953Report(void);
+int ade7953ReportStatus(report_t * psRprt, ade7953_t * psADE7953);
+int ade7953Report(report_t * psRprt);
 
 #ifdef __cplusplus
 }
