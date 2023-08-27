@@ -7,7 +7,7 @@
 #include "definitions.h"
 #include "hal_gpio.h"
 #if (ade7953USE_I2C > 0)
-	#include "hal_i2c.h"
+	#include "hal_i2c_common.h"
 #elif (ade7953USE_SPI > 0)
 	#include "hal_spi.h"
 #endif

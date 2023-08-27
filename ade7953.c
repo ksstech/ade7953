@@ -15,7 +15,6 @@
 
 #if (halHAS_ADE7953 > 0)
 #include "ade7953.h"
-#include "hal_i2cm.h"
 #include "hal_storage.h"
 #include "FreeRTOS_Support.h"
 #include "options.h"
