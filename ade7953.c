@@ -270,10 +270,10 @@ int	ade7953Identify(i2c_di_t * psI2C) {
  * @return
  */
 int ade7953Config(i2c_di_t * psI2C) {
-	int iRV = ade7953ReConfig(psI2C);
-	DevIDflag |= 1 << devID_ADE7953;
 	IF_SYSTIMER_INIT(debugTIMING, stADE7953R, stMICROS, "ADE7953RD", 1500, 15000);
 	IF_SYSTIMER_INIT(debugTIMING, stADE7953W, stMICROS, "ADE7953WR", 1500, 15000);
+	int iRV = ade7953ReConfig(psI2C);
+	if (iRV > erFAILURE) xEventGroupSetBits(EventDevices, devMASK_ADE7953);
 	ade7953InitIRQ(psI2C->DevIdx);
 	return iRV;
 }
