@@ -100,6 +100,18 @@ int ade7953CalcRegSize(u16_t Reg) {
 	return 4;
 }
 
+u32_t ade7953CalcRegValue(u16_t Reg, px_t pX) {
+	int Size = ade7953CalcRegSize(Reg);
+	u32_t U32 = *pX.pu8;
+	++pX.pu8;
+	if (Size > 1) U32 += *pX.pu8 << 8;
+	++pX.pu8;
+	if (Size > 2) U32 += *pX.pu8 << 16;
+	++pX.pu8;
+	if (Size > 3) U32 += *pX.pu8 << 24;
+	return U32;
+}
+
 int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t Val) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953));
 	int Size = ade7953CalcRegSize(Reg);
@@ -307,10 +319,22 @@ void ade7953ReportAdjust(void) { }
 
 void ade7953ReportData(void) { }
 
+const char CalRegName[] = "xIGAIN   xVGAIN   xWGAIN   xVARGAIN xVAGAIN  PHCALx\r\n";
 int ade7953ReportCalib(report_t * psR, ade7953_t * psADE7953) {
-	int iRV = wprintfx(psR, "");
+	int iRV = wprintfx(psR, CalRegName);
+	const int Max = (ade7953USE_CH2 == 0) ? NO_MEM(NVSDefaults) : NO_MEM(NVSDefaults) /2 ;
+	static x24_t X24;
+	for( int i = 0; i < Max; ++i) {
+		ade7953Read(psADE7953, CfgRegs[i], &X24.x8[0]);
+		iRV += wprintfx(psR, "0x%0*X ", ade7953CalcRegSize(CfgRegs[i])*2, ade7953CalcRegValue(CfgRegs[i], (px_t)&X24));
+	}
+	iRV += wprintfx(psR, strCRLF);
 	#if (ade7953USE_CH2 > 0)
-		iRV += wprintfx(psR, "");
+	for( int i = 0; i < Max; ++i) {
+		ade7953Read(psADE7953, CfgRegs[Max+i], &X24.x8[0]);
+		iRV += wprintfx(psR, "0x%0*X ", ade7953CalcRegSize(CfgRegs[Max+i])*2, ade7953CalcRegValue(CfgRegs[Max+i], (px_t)&X24));
+	}
+	iRV += wprintfx(psR, strCRLF);
 	#endif
 	return iRV;
 }
@@ -318,55 +342,69 @@ int ade7953ReportCalib(report_t * psR, ade7953_t * psADE7953) {
 int ade7953ReportStatus(report_t * psR, ade7953_t * psADE7953) {
 	int iRV;
 	// Decode DISNOLOAD
-	iRV = wprintfx(psR, "DISNOLOAD: va=%d  var=%d  ap=%d (%03X)\r\n", psADE7953->oth.disnoload.va,
+	iRV = wprintfx(psR, "DNLOAD\tva=%d  var=%d  ap=%d (%03X)\r\n", psADE7953->oth.disnoload.va,
 		psADE7953->oth.disnoload.var, psADE7953->oth.disnoload.ap, psADE7953->oth.disnoload.val);
 	// Decode LCYCMODE
-	iRV += wprintfx(psR, " LCYCMODE: srtr=%d blva=%d alva=%d blvar=%d alvar=%d blwatt=%d alwatt=%d (%03X)\r\n",
+	iRV += wprintfx(psR, "LCMODE\tsrtr=%d Blva=%d Alva=%d Blvar=%d Alvar=%d Blwatt=%d Alwatt=%d (%03X)\r\n",
 		psADE7953->oth.lcycmode.rstr, psADE7953->oth.lcycmode.blva,psADE7953->oth.lcycmode.alva,
 		psADE7953->oth.lcycmode.blvar, psADE7953->oth.lcycmode.alvar, psADE7953->oth.lcycmode.blwatt,
 		psADE7953->oth.lcycmode.alwatt, psADE7953->oth.lcycmode.val);
+
 	// Decode CONFIG register
-	iRV += wprintfx(psR, "   CONFIG: CL=%d ZXE=%d ZXI=%d CRC=%d SWRST=%d ZXLFP=%d ",
+	iRV += wprintfx(psR, "CONFIG\tCL=%d ZXE=%d ZXI=%d CRC=%d SWRST=%d ZXLFP=%d ",
 		psADE7953->oth.cfg.COMM_LOCK, psADE7953->oth.cfg.ZX_EDGE, psADE7953->oth.cfg.ZX_I,
 		psADE7953->oth.cfg.CRC_ENABLE, psADE7953->oth.cfg.SWRST, psADE7953->oth.cfg.ZXLPF);
+
 	iRV += wprintfx(psR, "REVP_P=%d REVP_CF=%d PFM=%d HPF_E=%d IEB=%d IEA=%d (%03X)\r\n",
 		psADE7953->oth.cfg.REVP_PULSE, psADE7953->oth.cfg.REVP_CF, psADE7953->oth.cfg.PFMODE, psADE7953->oth.cfg.HPFEN,
 		psADE7953->oth.cfg.INTENB, psADE7953->oth.cfg.INTENA, psADE7953->oth.cfg.val);
+
 	// CFMODE
-	iRV += wprintfx(psR, "   CFMODE: cf2dis=%d cf1dis=%d cf2sel=%d cf1sel=%d (%03X)\r\n", psADE7953->oth.cfmode.cf2dis,
-		psADE7953->oth.cfmode.cf1dis, psADE7953->oth.cfmode.cf2sel, psADE7953->oth.cfmode.cf1sel, psADE7953->oth.cfmode.val);
+	iRV += wprintfx(psR, "CFMODE\tcf2dis=%d cf1dis=%d cf2sel=%d cf1sel=%d (%03X)\r\n",
+		psADE7953->oth.cfmode.cf2dis, psADE7953->oth.cfmode.cf1dis, psADE7953->oth.cfmode.cf2sel,
+		psADE7953->oth.cfmode.cf1sel, psADE7953->oth.cfmode.val);
+
 	//ALT_OUT
-	iRV += wprintfx(psR, "  ALT_OUT: revp=%X zxi=%X zxz=%X (%03X)\r\n", psADE7953->oth.alt_out.revp_alt,
+	iRV += wprintfx(psR, "ALTOUT\trevp=%X zxi=%X zxz=%X (%03X)\r\n", psADE7953->oth.alt_out.revp_alt,
 		psADE7953->oth.alt_out.zxi_alt, psADE7953->oth.alt_out.zx_alt, psADE7953->oth.alt_out);
+
 	// ACCMODE
-	iRV += wprintfx(psR, " ACC_MODE: bvarnl=%d bvanl=%d bactnl=%d avarnl=%d avanl=%d aactnl=%d bvarsign=%d avarsign=%d ",
+	iRV += wprintfx(psR, "ACCMOD\tBvarnl=%d Bvanl=%d Bactnl=%d Avarnl=%d Avanl=%d Aactnl=%d Bvarsign=%d Avarsign=%d ",
 		psADE7953->oth.accmode.bvarnl, psADE7953->oth.accmode.bvanl, psADE7953->oth.accmode.bactnl,
 		psADE7953->oth.accmode.avarnl, psADE7953->oth.accmode.avanl, psADE7953->oth.accmode.aactnl,
 		psADE7953->oth.accmode.bvarsign, psADE7953->oth.accmode.avarsign);
-	iRV += wprintfx(psR, "bapsign=%d aapsign=%d bvaacc=%d avaacc=%d bvaracc=%X avaracc=%X bwattacc=%X awattacc=%X (%03X)\r\n",
+
+	iRV += wprintfx(psR, "Bapsign=%d Aapsign=%d Bvaacc=%d Avaacc=%d Bvaracc=%d Avaracc=%d Bwattacc=%d Awattacc=%d (%06X)\r\n",
 		psADE7953->oth.accmode.bapsign, psADE7953->oth.accmode.aapsign, psADE7953->oth.accmode.bvaacc,
 		psADE7953->oth.accmode.avaacc, psADE7953->oth.accmode.bvaracc, psADE7953->oth.accmode.avaracc,
 		psADE7953->oth.accmode.bwattacc, psADE7953->oth.accmode.awattacc, psADE7953->oth.accmode.val);
+
 	// Decode IRQA registers
-	iRV += wprintfx(psR, "IRQA: EN=0x%06X STAT==0x%06X\r\n", psADE7953->oth.ie_a.val, psADE7953->oth.is_a.val);
-	const char caStat1[] = "%s:\tAEHFx=%d VAREHFx=%d VAEHFx=%d AEOFx=%d VAREOFx=%d VAEOFx=%d AP_NOLOADx=%d ";
-	iRV += wprintfx(psR, caStat1, "ENA", psADE7953->oth.is_a.AEHFA, psADE7953->oth.is_a.VAREHFA,
+	iRV += wprintfx(psR, "IRQ_A\tEN=0x%06X  STAT==0x%06X\r\n", psADE7953->oth.ie_a.val, psADE7953->oth.is_a.val);
+
+	const char caStat1[] = "%s\tAEHFx=%d VAREHFx=%d VAEHFx=%d AEOFx=%d VAREOFx=%d VAEOFx=%d AP_NOLOADx=%d ";
+	iRV += wprintfx(psR, caStat1, "ENAB_A", psADE7953->oth.is_a.AEHFA, psADE7953->oth.is_a.VAREHFA,
 		psADE7953->oth.is_a.VAEHFA, psADE7953->oth.is_a.AEOFA, psADE7953->oth.is_a.VAREOFA,
 		psADE7953->oth.is_a.VAEOFA, psADE7953->oth.is_a.AP_NOLOADA);
+
 	const char caStat2[] = "VAR_NOLOADx=%d VA_NOLOADx=%d APSIGNx=%d VARSIGNx=%d ZXTO_Ix=%d ZXIx=%d OIx=%d ";
 	iRV += wprintfx(psR, caStat2, psADE7953->oth.is_a.VAR_NOLOADA, psADE7953->oth.is_a.VA_NOLOADA,
 		psADE7953->oth.is_a.APSIGN_A, psADE7953->oth.is_a.VARSIGN_A, psADE7953->oth.is_a.ZXTO_IA,
 		psADE7953->oth.is_a.ZXIA, psADE7953->oth.is_a.OIA);
+
 	const char caStat3[] = "ZXTO=%d ZXV=%d OV=%d WSMP=%d CYCEND=%d SAG=%d RESET=%d CRC=%d\r\n";
 	iRV += wprintfx(psR, caStat3, psADE7953->oth.is_a.ZXTO, psADE7953->oth.is_a.ZXV, psADE7953->oth.is_a.OV,
 		psADE7953->oth.is_a.WSMP, psADE7953->oth.is_a.CYCEND, psADE7953->oth.is_a.SAG,
 		psADE7953->oth.is_a.RESET, psADE7953->oth.is_a.CRC);
+
 	#if (ade7953USE_CH2 > 0)
 	// Decode IRQB registers
-	iRV += wprintfx(psR, "IRQB: EN=0x%06X STAT==0x%06X\r\n", psADE7953->oth.ie_b.val, psADE7953->oth.is_b.val);
-	iRV += wprintfx(psR, caStat1, "ENB", psADE7953->oth.is_b.AEHFB, psADE7953->oth.is_b.VAREHFB,
+	iRV += wprintfx(psR, "IRQ_B\tEN=0x%06X  STAT==0x%06X\r\n", psADE7953->oth.ie_b.val, psADE7953->oth.is_b.val);
+
+	iRV += wprintfx(psR, caStat1, "ENAB_B", psADE7953->oth.is_b.AEHFB, psADE7953->oth.is_b.VAREHFB,
 		psADE7953->oth.is_b.VAEHFB, psADE7953->oth.is_b.AEOFB, psADE7953->oth.is_b.VAREOFB,
 		psADE7953->oth.is_b.VAEOFB, psADE7953->oth.is_b.AP_NOLOADB);
+
 	iRV += wprintfx(psR, caStat2, psADE7953->oth.is_b.VAR_NOLOADB, psADE7953->oth.is_b.VA_NOLOADB,
 		psADE7953->oth.is_b.APSIGN_B,psADE7953->oth.is_b.VARSIGN_B, psADE7953->oth.is_b.ZXTO_IB,
 		psADE7953->oth.is_b.ZXIB, psADE7953->oth.is_b.OIB);
