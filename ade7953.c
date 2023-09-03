@@ -120,7 +120,7 @@ int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t Val) {
 	while (Size--) caBuf[Len++] = (Val >> (8 * Size)) & 0xFF;		// correct LE -> LE conversion
 
 	IF_EXEC_1(debugTIMING, xSysTimerStart, stADE7953W);
-	int iRV = halI2CM_Queue(psADE7953->psI2C, i2cW_B, caBuf, Len, NULL, 0, (i2cq_p1_t)NULL, (i2cq_p2_t)NULL);
+	int iRV = halI2C_Queue(psADE7953->psI2C, i2cW_B, caBuf, Len, NULL, 0, (i2cq_p1_t)NULL, (i2cq_p2_t)NULL);
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953W);
 
 	if ((iRV < erSUCCESS) && !(Reg == regCONFIG && (Val & regCONFIG_SWRST)))
@@ -134,7 +134,7 @@ int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pVal) {
 	int Size = ade7953CalcRegSize(Reg);
 	//
 	IF_EXEC_1(debugTIMING, xSysTimerStart, stADE7953R);
-	int iRV = halI2CM_Queue(psADE7953->psI2C, psADE7953->cb ? i2cWRC_F : i2cWR_B, caBuf,
+	int iRV = halI2C_Queue(psADE7953->psI2C, psADE7953->cb ? i2cWRC_F : i2cWR_B, caBuf,
 		sizeof(caBuf),pVal, Size, (i2cq_p1_t)psADE7953->cb, (i2cq_p2_t) (void *)psADE7953);
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953R);
 	//
