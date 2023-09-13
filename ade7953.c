@@ -14,10 +14,8 @@
 #include "hal_variables.h"
 
 #if (halHAS_ADE7953 > 0)
-#include "ade7953.h"
 #include "hal_storage.h"
-#include "FreeRTOS_Support.h"
-#include "options.h"
+#include "hal_i2c_common.h"
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"					// timing debugging
@@ -157,26 +155,18 @@ int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pVal, u32_t ANDmask, 
 		iRV = ade7953Read(psADE7953, Reg, pVal);
 		IF_EXIT(iRV < erSUCCESS);
 		x32_t X32 = { 0 };
-		if (Size == 1)
-			X32.x8[0].u8 = *(u8_t *) pVal;
-		else if (Size == 2)
-			X32.x16[0].u16 = *(u16_t *) pVal;
-		else if (Size == 3)
-			X32.x24 = *(x24_t *) pVal;
-		else
-			X32.u32 = *(u32_t*)pVal;
+		if (Size == 1) X32.x8[0].u8 = *(u8_t *) pVal;
+		else if (Size == 2) X32.x16[0].u16 = *(u16_t *) pVal;
+		else if (Size == 3) X32.x24 = *(x24_t *) pVal;
+		else X32.u32 = *(u32_t*)pVal;
 
 		X32.u32 &= ANDmask;
 		X32.u32 |= ORmask;
 
-		if (Size == 1)
-			*(u8_t *) pVal = X32.x8[0].u8;
-		else if (Size == 2)
-			*(u16_t *) pVal = X32.x16[0].u16;
-		else if (Size == 3)
-			*(x24_t *) pVal = X32.x24;
-		else
-			*(u32_t *) pVal = X32.u32;
+		if (Size == 1) *(u8_t *) pVal = X32.x8[0].u8;
+		else if (Size == 2) *(u16_t *) pVal = X32.x16[0].u16;
+		else if (Size == 3) *(x24_t *) pVal = X32.x24;
+		else *(u32_t *) pVal = X32.u32;
 
 		iRV = ade7953Write(psADE7953, Reg, X32.u32);
 	}
@@ -204,16 +194,16 @@ void IRAM_ATTR ade7953IRQ_CB(void * Arg) {
  **/
 void IRAM_ATTR ade7953IntHandler(void * Arg) {
 	CPTL(); u8_t eDev = (int) Arg;
-	IF_myASSERT(debugPARAM, eDev < halHAS_ADE7953); // @suppress("Type cannot be resolved")
+	IF_myASSERT(debugPARAM, eDev < halHAS_ADE7953);
 	ade7953_t * psADE7953 = &ade7953[eDev];
 
 	// schedule 1st read, just to update in SRAM
 	psADE7953->cb = NULL;
-	ade7953Read(psADE7953, regRSTIRQSTATA, &psADE7953->oth.is_a); // @suppress("Symbol is not resolved")
+	ade7953Read(psADE7953, regRSTIRQSTATA, &psADE7953->oth.is_a);
 
 	// schedule 2nd read with callback handler
 	psADE7953->cb = &ade7953IRQ_CB;
-	ade7953Read(psADE7953, regRSTIRQSTATB, &psADE7953->oth.is_b); // @suppress("Symbol is not resolved")
+	ade7953Read(psADE7953, regRSTIRQSTATB, &psADE7953->oth.is_b);
 }
 
 void ade7953InitIRQ(int DevIdx) {
@@ -308,7 +298,6 @@ int ade7953ReConfig(i2c_di_t * psI2C) {
 	ade7953Update(psADE7953, regLCYCMODE, &psADE7953->oth.lcycmode, 0xBF, 0x40);
 	return (ade7953ReadConfig(psADE7953) & 0x8000) ? erFAILURE : erSUCCESS;
 }
-
 
 // ###################################### general support ##########################################
 

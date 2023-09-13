@@ -4,14 +4,6 @@
 
 #pragma		once
 
-#include "definitions.h"
-#include "hal_gpio.h"
-#if (ade7953USE_I2C > 0)
-	#include "hal_i2c_common.h"
-#elif (ade7953USE_SPI > 0)
-	#include "hal_spi.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -328,8 +320,8 @@ typedef struct __attribute__((packed)) ade7953X_t {
 // ####################################### Global variables ########################################
 
 extern u8_t NumADE7953;
-extern ade7953_t ade7953[halHAS_ADE7953];
-extern ade7953nvs_t ade7953nvs[halHAS_ADE7953];
+extern ade7953_t ade7953[];
+extern ade7953nvs_t ade7953nvs[];
 
 // ####################################### Global functions ########################################
 
