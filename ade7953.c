@@ -296,6 +296,7 @@ int ade7953ReConfig(i2c_di_t * psI2C) {
 	ade7953LoadNVSConfig(psI2C->DevIdx, 0);				// load default calibration
 
 	ade7953Update(psADE7953, regLCYCMODE, &psADE7953->oth.lcycmode, 0xBF, 0x40);
+	xRtosSetDevice(devMASK_ADE7953);
 	return (ade7953ReadConfig(psADE7953) & 0x8000) ? erFAILURE : erSUCCESS;
 }
 
