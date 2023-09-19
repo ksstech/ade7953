@@ -279,8 +279,9 @@ typedef union {											// 16bit sensor registers
 	x16_t ep_x[ade7953NUM_SEN16];
 } r16_ep_t;
 
+struct i2c_di_t;
 typedef struct __attribute__((packed)) {
-	i2c_di_t * psI2C;
+	struct i2c_di_t * psI2C;
 	void (*cb)(void *);
 	i32_t cal[ade7953NUM_CHAN * 6];
 	reg_oth_t oth;
@@ -331,13 +332,12 @@ int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pVal);
 int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pVal, u32_t ANDmask, u32_t ORmask);
 u16_t ade7953ReadConfig(ade7953_t * psADE7953);
 
-int	ade7953Identify(i2c_di_t * psI2C);
-int ade7953Config(i2c_di_t * psI2C);
-int ade7953ReConfig(i2c_di_t * psI2C);
+int	ade7953Identify(struct i2c_di_t * psI2C);
+int ade7953Config(struct i2c_di_t * psI2C);
 int	ade7953LoadNVSConfig(u8_t eChan, u8_t Idx);
-
-int ade7953ReportStatus(report_t * psRprt, ade7953_t * psADE7953);
-int ade7953Report(report_t * psRprt);
+struct report_t;
+int ade7953ReportStatus(struct report_t * psRprt, ade7953_t * psADE7953);
+int ade7953Report(struct report_t * psRprt);
 
 #ifdef __cplusplus
 }
