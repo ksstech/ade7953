@@ -11,11 +11,12 @@
  * mode option to select WHr or KWHr, set default, variable used as divisor
  */
 
-#include "hal_variables.h"
+#include "hal_config.h"
 
 #if (halHAS_ADE7953 > 0)
-#include "hal_storage.h"
+#include "ade7953.h"
 #include "hal_i2c_common.h"
+#include "hal_storage.h"
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"					// timing debugging
@@ -245,24 +246,19 @@ int	ade7953LoadNVSConfig(u8_t eChan, u8_t Idx) {
 // ############################## identification & initialization ##################################
 
 int	ade7953Identify(i2c_di_t * psI2C) {
-	psI2C->TRXmS = 10;									// default device timeout
-	psI2C->CLKuS = 400;									// Max 13000 (13mS)
-	psI2C->Test = 1;									// test mode
-	psI2C->Type = i2cDEV_ADE7953;
-	psI2C->Speed = i2cSPEED_400;
-	psI2C->DevIdx = NumADE7953;
 	ade7953_t * psADE7953 = &ade7953[psI2C->DevIdx];
 	psADE7953->psI2C = psI2C;
-	//
+	psI2C->Type = i2cDEV_ADE7953;
+	psI2C->Speed = i2cSPEED_400;
+	psI2C->TObus = 25;
+	psI2C->Test = 1;									// test mode
 	int iRV = ade7953Read(psADE7953, regVERSION, &psADE7953->oth.ver);
+	if (iRV < erSUCCESS) goto exit;
+	SL_DBG("Silicon Version=0x%0hhX", psADE7953->oth.ver);
+	psI2C->DevIdx = NumADE7953++;
+	psI2C->IDok = 1;
 	psI2C->Test = 0;
-	if (iRV < erSUCCESS) {
-		SL_ERR("Device Failed!!!");
-		psADE7953->psI2C = NULL;
-		return erFAILURE;
-	}
-	SL_WARN("Silicon Version=0x%0hhX", psADE7953->oth.ver);
-	++NumADE7953;
+exit:
 	return iRV;
 }
 
@@ -272,32 +268,44 @@ int	ade7953Identify(i2c_di_t * psI2C) {
  * @return
  */
 int ade7953Config(i2c_di_t * psI2C) {
-	IF_SYSTIMER_INIT(debugTIMING, stADE7953R, stMICROS, "ADE7953RD", 1500, 15000);
-	IF_SYSTIMER_INIT(debugTIMING, stADE7953W, stMICROS, "ADE7953WR", 1500, 15000);
-	int iRV = ade7953ReConfig(psI2C);
-	if (iRV > erFAILURE) xEventGroupSetBits(EventDevices, devMASK_ADE7953);
-	ade7953InitIRQ(psI2C->DevIdx);
-	return iRV;
-}
+	if (!psI2C->IDok) return erINV_STATE;
 
-int ade7953ReConfig(i2c_di_t * psI2C) {
+	psI2C->CFGok = 0;
 	ade7953_t * psADE7953 = &ade7953[psI2C->DevIdx];
 	psADE7953->psI2C->Test = 1;							// disable handling error we expect to get
 	int iRV = ade7953Write(psADE7953, regCONFIG, regCONFIG_SWRST);
+	IF_myASSERT(debugRESULT, iRV < erSUCCESS);
 	psADE7953->psI2C->Test = 0;
 	do {
 		vTaskDelay(pdMS_TO_TICKS(10));
 		iRV = ade7953Read(psADE7953, regIRQSTATA, &psADE7953->oth.is_a);
 	} while (iRV < erSUCCESS || (psADE7953->oth.is_a.RESET == 0));
+	if (iRV < erSUCCESS) goto exit;
 
-	ade7953Write(psADE7953, regCONFIG, 0x04);			// Lock comms interface, enable high pass filter
-	ade7953Write(psADE7953, regUNLOCK, 0xAD);			// Unlock reg 0x0120
-	ade7953Write(psADE7953, regOPTIMUM, 0x30);			// enable optimum settings
-	ade7953LoadNVSConfig(psI2C->DevIdx, 0);				// load default calibration
+	iRV = ade7953Write(psADE7953, regCONFIG, 0x04);	// Lock comms interface, enable high pass filter
+	if (iRV < erSUCCESS) goto exit;
 
-	ade7953Update(psADE7953, regLCYCMODE, &psADE7953->oth.lcycmode, 0xBF, 0x40);
-	xRtosSetDevice(devMASK_ADE7953);
-	return (ade7953ReadConfig(psADE7953) & 0x8000) ? erFAILURE : erSUCCESS;
+	iRV = ade7953Write(psADE7953, regUNLOCK, 0xAD);	// Unlock reg 0x0120
+	if (iRV < erSUCCESS) goto exit;
+
+	iRV = ade7953Write(psADE7953, regOPTIMUM, 0x30);	// enable optimum settings
+	if (iRV < erSUCCESS) goto exit;
+
+	iRV = ade7953LoadNVSConfig(psI2C->DevIdx, 0);		// load default calibration
+	if (iRV < erSUCCESS) goto exit;
+
+	iRV = ade7953Update(psADE7953, regLCYCMODE, &psADE7953->oth.lcycmode, 0xBF, 0x40);
+	if (iRV < erSUCCESS) goto exit;
+
+	psI2C->CFGok = (ade7953ReadConfig(psADE7953) & 0x8000) ? 0 : 1;
+	// once off init....
+	if (!psI2C->CFGerr) {
+		IF_SYSTIMER_INIT(debugTIMING, stADE7953R, stMICROS, "ADE7953RD", 1500, 15000);
+		IF_SYSTIMER_INIT(debugTIMING, stADE7953W, stMICROS, "ADE7953WR", 1500, 15000);
+		ade7953InitIRQ(psI2C->DevIdx);
+	}
+exit:
+	return iRV;
 }
 
 // ###################################### general support ##########################################
