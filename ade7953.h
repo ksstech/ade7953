@@ -4,6 +4,9 @@
 
 #pragma		once
 
+#include "definitions.h"
+#include "struct_union.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -290,7 +293,6 @@ typedef struct __attribute__((packed)) {
 } ade7953_t;
 
 typedef struct { i32_t val[ade7953NUM_CHAN * 6]; } ade7953nvs_t;
-
 DUMB_STATIC_ASSERT(sizeof(ade7953nvs_t) == (ade7953NUM_CHAN * 24));
 
 /*

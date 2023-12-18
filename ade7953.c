@@ -23,6 +23,7 @@
 #include "x_errors_events.h"
 
 #include "nvs.h"
+#include <string.h>
 
 // ######################################## Build macros ###########################################
 
