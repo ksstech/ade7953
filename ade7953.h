@@ -11,6 +11,52 @@
 extern "C" {
 #endif
 
+/* Calibration info
+ * Tasmota:
+ * "rms":{"current_a":4194303,"current_b":4194303,"voltage":1613194}
+ * "angles":{"angle0":200,"angle1":200}
+ * "powers":{
+ * 	"totactive":{"a":2723574,"b":2723574},
+ * 	"apparent":{"a":2723574,"b":2723574},
+ * 	"reactive":{"a":2723574,"b":2723574}}
+ *
+ * Mongoose:
+ade7953nvs_t NVSDefF32 = {
+	.current_scale_0 = 0.00000949523,
+	.current_offset_0 = -0.017,
+	.apower_scale_0 = (1 / 164.0),
+	.aenergy_scale_0 = (1 / 25240.0),
+
+	.current_scale_1 = 0.00000949523,
+	.current_offset_1 = -0.017,
+	.apower_scale_1 = (1 / 164.0),
+	.aenergy_scale_1 = (1 / 25240.0),
+
+	.voltage_scale = 0.0000382602,
+	.voltage_offset = -0.068,
+
+	.voltage_pga_gain = 1,
+	.current_pga_gain_0 = 1,
+	.current_pga_gain_1 = 1,
+};
+
+const struct mgos_config_ade7953 ade_cfg = {
+      .voltage_scale = .0000382602,
+      .voltage_offset = -0.068,
+      .current_scale_0 = 0.00000949523,
+      .current_scale_1 = 0.00000949523,
+      .current_offset_0 = -0.017,
+      .current_offset_1 = -0.017,
+      .apower_scale_0 = (1 / 164.0),
+      .apower_scale_1 = (1 / 164.0),
+      .aenergy_scale_0 = (1 / 25240.0),
+      .aenergy_scale_1 = (1 / 25240.0),
+      .voltage_pga_gain = MGOS_ADE7953_PGA_GAIN_1,
+      .current_pga_gain_0 = MGOS_ADE7953_PGA_GAIN_8,
+      .current_pga_gain_1 = MGOS_ADE7953_PGA_GAIN_8,
+  };
+*/
+
 // ##################################### BUILD definitions #########################################
 
 #define	ade7953STORAGE_KEY			"ade7953"
