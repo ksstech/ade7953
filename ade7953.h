@@ -4,6 +4,7 @@
 
 #pragma		once
 
+#include "hal_config.h"
 #include "definitions.h"
 #include "struct_union.h"
 
@@ -375,10 +376,11 @@ extern ade7953nvs_t ade7953nvs[];
 // ####################################### Global functions ########################################
 
 int ade7953CalcRegSize(u16_t Reg);
-int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t Val);
-int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pVal);
-int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pVal, u32_t ANDmask, u32_t ORmask);
+int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t I32);
+int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pV);
+int ade7953ReadValue(ade7953_t * psADE7953, u16_t Reg, i32_t * pI32, bool bSign);
 u16_t ade7953ReadConfig(ade7953_t * psADE7953);
+int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pVal, u32_t ANDmask, u32_t ORmask);
 
 int	ade7953Identify(struct i2c_di_t * psI2C);
 int ade7953Config(struct i2c_di_t * psI2C);

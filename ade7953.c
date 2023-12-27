@@ -11,10 +11,9 @@
  * mode option to select WHr or KWHr, set default, variable used as divisor
  */
 
-#include "hal_config.h"
+#include "ade7953.h"
 
 #if (halHAS_ADE7953 > 0)
-#include "ade7953.h"
 #include "hal_i2c_common.h"
 #include "hal_storage.h"
 #include "printfx.h"
@@ -56,35 +55,7 @@ const u16_t CfgRegs[ade7953NUM_CHAN * 6] = {
 	#endif
 };
 
-/*
- * Tasmota:
- * "rms":{"current_a":4194303,"current_b":4194303,"voltage":1613194}
- * "angles":{"angle0":200,"angle1":200}
- * "powers":{
- * 	"totactive":{"a":2723574,"b":2723574},
- * 	"apparent":{"a":2723574,"b":2723574},
- * 	"reactive":{"a":2723574,"b":2723574}}
- *
- * Mongoose:
-ade7953nvs_t NVSDefF32 = {
-	.current_scale_0 = 0.00000949523,
-	.current_offset_0 = -0.017,
-	.apower_scale_0 = (1 / 164.0),
-	.aenergy_scale_0 = (1 / 25240.0),
-
-	.current_scale_1 = 0.00000949523,
-	.current_offset_1 = -0.017,
-	.apower_scale_1 = (1 / 164.0),
-	.aenergy_scale_1 = (1 / 25240.0),
-
-	.voltage_scale = 0.0000382602,
-	.voltage_offset = -0.068,
-
-	.voltage_pga_gain = 1,
-	.current_pga_gain_0 = 1,
-	.current_pga_gain_1 = 1,
 };
- */
 
 // ####################################### Public variables ########################################
 
@@ -112,39 +83,72 @@ u32_t ade7953CalcRegValue(u16_t Reg, px_t pX) {
 	return U32;
 }
 
-int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t Val) {
+/**
+ * @brief	Write integer value to specified register
+ * @return	number of data bytes written (if no error) or error code
+*/
+int ade7953Write(ade7953_t * psADE7953, u16_t Reg, i32_t I32) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953));
 	int Size = ade7953CalcRegSize(Reg);
 	u8_t caBuf[6] = { (Reg >> 8) & 0xFF, Reg & 0xFF };
 	int Len = 2;
-	while (Size--) caBuf[Len++] = (Val >> (8 * Size)) & 0xFF;		// correct LE -> LE conversion
+	while (Size--) caBuf[Len++] = (I32 >> (8 * Size)) & 0xFF;		// correct BE -> LE conversion
 
 	IF_EXEC_1(debugTIMING, xSysTimerStart, stADE7953W);
 	int iRV = halI2C_Queue(psADE7953->psI2C, i2cW_B, caBuf, Len, NULL, 0, (i2cq_p1_t)NULL, (i2cq_p2_t)NULL);
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953W);
 
-	if ((iRV < erSUCCESS) && !(Reg == regCONFIG && (Val & regCONFIG_SWRST)))
+	if ((iRV < erSUCCESS) && !(Reg == regCONFIG && (I32 & regCONFIG_SWRST)))
 		SL_ERR("Error Reg=0x%X iRV=%d", Reg, iRV);
-	return iRV;
+	return iRV < erSUCCESS ? iRV : Len-2;
 }
 
-int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pVal) {
+/**
+ * @brief	integer value from specified register
+ * @return	number of data bytes read (register length) or error code
+*/
+int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pV) {
 	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953));
 	u8_t caBuf[2] = { (Reg >> 8) & 0xFF,  Reg & 0xFF };
 	int Size = ade7953CalcRegSize(Reg);
-	//
+
+	// depending on whether a callback address is set, select I2C opcode
 	IF_EXEC_1(debugTIMING, xSysTimerStart, stADE7953R);
 	int iRV = halI2C_Queue(psADE7953->psI2C, psADE7953->cb ? i2cWRC_F : i2cWR_B, caBuf,
-		sizeof(caBuf),pVal, Size, (i2cq_p1_t)psADE7953->cb, (i2cq_p2_t) (void *)psADE7953);
+		sizeof(caBuf), pV, Size, (i2cq_p1_t)psADE7953->cb, (i2cq_p2_t) (void *)psADE7953);
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953R);
-	//
-	if (Size > 1) {
-		u8_t * pU8 = pVal;
-		u8_t U8 = pU8[0];
-		pU8[0] = pU8[Size-1];
-		pU8[Size-1] = U8;
+	return (iRV < erSUCCESS) ? iRV : Size;
+}
+
+/**
+ * @brief	sensor value ([un]signed integer)
+ * @return	if no error, number of bytes read else erFAILURE
+*/
+int ade7953ReadValue(ade7953_t * psADE7953, u16_t Reg, i32_t * pI32, bool bSign) {
+	u8_t caData[4];
+	int iRV = ade7953Read(psADE7953, Reg, caData);
+	if (iRV < erSUCCESS) return erFAILURE;
+	*pI32 = 0;
+	// Convert to [un]signed value
+	for (int i = 0; i < iRV; i++) *pI32 = (*pI32 << 8) | caData[i];
+	// Fix the sign
+	if (bSign) {
+	    u32_t sign_mask = 0;
+		if (iRV == 1) sign_mask = (1 << 7);
+		if (iRV == 2) sign_mask = (1 << 15);
+		if (iRV == 3) sign_mask = (1 << 23);
+		if (iRV == 4) sign_mask = (1 << 31);
+		if ((*pI32 & sign_mask) != 0) {
+			*pI32 &= ~sign_mask;
+			*pI32 |= (1 << 31);
+		}
 	}
 	return iRV;
+}
+
+u16_t ade7953ReadConfig(ade7953_t * psADE7953) {
+	int iRV = ade7953Read(psADE7953, regCONFIG, &psADE7953->oth.cfg.val);
+	return (iRV < erSUCCESS) ? 0 : psADE7953->oth.cfg.val;
 }
 
 int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pVal, u32_t ANDmask, u32_t ORmask) {
@@ -174,11 +178,6 @@ int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pVal, u32_t ANDmask, 
 	}
 exit:
 	return iRV;
-}
-
-u16_t ade7953ReadConfig(ade7953_t * psADE7953) {
-	ade7953Read(psADE7953, regCONFIG, &psADE7953->oth.cfg.val);
-	return psADE7953->oth.cfg.val;
 }
 
 /*
