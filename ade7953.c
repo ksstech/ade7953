@@ -41,20 +41,18 @@
 
 // ####################################### Private variables #######################################
 
-i32_t NVSDefaults[ade7953NUM_CHAN * 6] = {
-	4194303, 1613194, 2723574, 2723574, 2723574, 200,
-	#if	(ade7953USE_CH2 > 0)		// Line 2 / Neutral
-	4194303, 1613194, 2723574, 2723574, 2723574, 200,
-	#endif
-};
-
 const u16_t CfgRegs[ade7953NUM_CHAN * 6] = {
 	regAIGAIN, regAVGAIN, regAWGAIN, regAVARGAIN, regAVAGAIN, regPHCALA,
-	#if	(ade7953USE_CH2 > 0)		// Line 2 / Neutral
+	#if	(ade7953USE_CH2 > 0)		// L2/Neutral
 	regBIGAIN, regBVGAIN, regBWGAIN, regBVARGAIN, regBVAGAIN, regPHCALB,
 	#endif
 };
 
+const i32_t NVSDefaults[ade7953NUM_CHAN * 6] = {
+	4194303, 1613194, 2723574, 2723574, 2723574, 200,
+	#if	(ade7953USE_CH2 > 0)		// L2/Neutral
+	4194303, 1613194, 2723574, 2723574, 2723574, 200,
+	#endif
 };
 
 // ####################################### Public variables ########################################
