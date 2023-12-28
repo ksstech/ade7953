@@ -20,6 +20,7 @@
 #include "syslog.h"
 #include "systiming.h"					// timing debugging
 #include "x_errors_events.h"
+#include "x_string_general.h"
 
 #include "nvs.h"
 #include <string.h>
@@ -115,6 +116,7 @@ int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pV) {
 	int iRV = halI2C_Queue(psADE7953->psI2C, psADE7953->cb ? i2cWRC_F : i2cWR_B, caBuf,
 		sizeof(caBuf), pV, Size, (i2cq_p1_t)psADE7953->cb, (i2cq_p2_t) (void *)psADE7953);
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953R);
+	if (Size > 1) xmemrev(pV, Size);
 	return (iRV < erSUCCESS) ? iRV : Size;
 }
 
@@ -206,6 +208,7 @@ void IRAM_ATTR ade7953IntHandler(void * Arg) {
 }
 
 void ade7953InitIRQ(int DevIdx) {
+	
 	gpio_config_t irq_pin_cfg = {
 		.pin_bit_mask = 1ULL << ade7953PIN_IRQ,
 		.mode = GPIO_MODE_INPUT,
