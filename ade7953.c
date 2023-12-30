@@ -128,9 +128,10 @@ int ade7953ReadValue(ade7953_t * psADE7953, u16_t Reg, i32_t * pI32, bool bSign)
 	u8_t caData[4];
 	int iRV = ade7953Read(psADE7953, Reg, caData);
 	if (iRV < erSUCCESS) return erFAILURE;
-	*pI32 = 0;
 	// Convert to [un]signed value
-	for (int i = 0; i < iRV; i++) *pI32 = (*pI32 << 8) | caData[i];
+	*pI32 = 0;
+	for (int i = 0; i < iRV; i++) *pI32 += caData[i] << (i * 8);
+
 	// Fix the sign
 	if (bSign) {
 	    u32_t sign_mask = 0;
