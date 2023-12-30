@@ -226,10 +226,8 @@ int	ade7953LoadNVSConfig(u8_t eChan, u8_t Idx) {
 	ade7953nvs_t * psCal = pvRtosMalloc(Size);
 	int iRV = halSTORAGE_ReadBlob(halSTORAGE_STORE, ade7953STORAGE_KEY, psCal, &Size, ESP_ERR_NVS_NOT_FOUND);
 	if ((iRV != erSUCCESS) || (Size != (ade7953CALIB_NUM * sizeof(NVSDefaults)))) {
-		// Clear the (just allocated & read into) blob memory
-		memset(psCal, 0, Size = ade7953CALIB_NUM * sizeof(NVSDefaults));
-		// Reset the 1st dataset to the NVS defaults, based on #of bytes
-		memcpy(psCal, &NVSDefaults, sizeof(NVSDefaults));
+		memset(psCal, 0, Size = ade7953CALIB_NUM * sizeof(NVSDefaults));	// Clear the  blob memory
+		memcpy(psCal, &NVSDefaults, sizeof(NVSDefaults));					// Reset 1st dataset to defaults
 		iRV = halSTORAGE_WriteBlob(halSTORAGE_STORE, ade7953STORAGE_KEY, psCal, Size);
 		IF_myASSERT(debugRESULT, iRV == erSUCCESS);
 		if (Idx) {
