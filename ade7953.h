@@ -300,8 +300,6 @@ typedef struct __attribute__((packed)) {
 	void (*cb)(void *);
 	i32_t cal[ade7953NUM_CHAN * 6];
 	reg_oth_t oth;
-	r24_ep_t ep24;
-	r16_ep_t ep16;
 } ade7953_t;
 
 typedef struct { i32_t val[ade7953NUM_CHAN * 6]; } ade7953nvs_t;
