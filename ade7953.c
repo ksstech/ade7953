@@ -116,8 +116,9 @@ int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pV) {
 	int iRV = halI2C_Queue(psADE7953->psI2C, psADE7953->cb ? i2cWRC_F : i2cWR_B, caBuf,
 		sizeof(caBuf), pV, Size, (i2cq_p1_t)psADE7953->cb, (i2cq_p2_t) (void *)psADE7953);
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953R);
+	if (iRV < erSUCCESS) return iRV;
 	if (Size > 1) xmemrev(pV, Size);
-	return (iRV < erSUCCESS) ? iRV : Size;
+	return Size;
 }
 
 /**
