@@ -19,43 +19,8 @@ extern "C" {
  * "powers":{
  * 	"totactive":{"a":2723574,"b":2723574},
  * 	"apparent":{"a":2723574,"b":2723574},
- * 	"reactive":{"a":2723574,"b":2723574}}
- *
- * Mongoose:
-ade7953nvs_t NVSDefF32 = {
-	.current_scale_0 = 0.00000949523,
-	.current_offset_0 = -0.017,
-	.apower_scale_0 = (1 / 164.0),
-	.aenergy_scale_0 = (1 / 25240.0),
-
-	.current_scale_1 = 0.00000949523,
-	.current_offset_1 = -0.017,
-	.apower_scale_1 = (1 / 164.0),
-	.aenergy_scale_1 = (1 / 25240.0),
-
-	.voltage_scale = 0.0000382602,
-	.voltage_offset = -0.068,
-
-	.voltage_pga_gain = 1,
-	.current_pga_gain_0 = 1,
-	.current_pga_gain_1 = 1,
-};
-
-const struct mgos_config_ade7953 ade_cfg = {
-      .voltage_scale = .0000382602,
-      .voltage_offset = -0.068,
-      .current_scale_0 = 0.00000949523,
-      .current_scale_1 = 0.00000949523,
-      .current_offset_0 = -0.017,
-      .current_offset_1 = -0.017,
-      .apower_scale_0 = (1 / 164.0),
-      .apower_scale_1 = (1 / 164.0),
-      .aenergy_scale_0 = (1 / 25240.0),
-      .aenergy_scale_1 = (1 / 25240.0),
-      .voltage_pga_gain = MGOS_ADE7953_PGA_GAIN_1,
-      .current_pga_gain_0 = MGOS_ADE7953_PGA_GAIN_8,
-      .current_pga_gain_1 = MGOS_ADE7953_PGA_GAIN_8,
-  };
+ * 	"reactive":{"a":2723574,"b":2723574}
+ * }
 */
 
 // ##################################### BUILD definitions #########################################
@@ -179,10 +144,10 @@ enum ade7953_gain {
 
 // ######################################### Structures ############################################
 
-typedef union {
+typedef union {						 // 8bit DISNOLOAD
 	struct  __attribute__((packed)) { u8_t ap:1; u8_t var:1; u8_t va:1; u8_t spare:5; };
 	u8_t val;
-} ade7953dnl_t; // 8bit DISNOLOAD register
+} ade7953dnl_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953dnl_t) == 1);
 
 typedef union {
@@ -193,7 +158,7 @@ typedef union {
 } ade7953lcm_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953lcm_t) == 1);
 
-typedef union {						// 16bit CONFIG register
+typedef union {						// 16bit CONFIG
 	struct __attribute__((packed)) {
 		u8_t INTENA : 1;
 		u8_t INTENB : 1;
@@ -214,19 +179,19 @@ typedef union {						// 16bit CONFIG register
 } ade7953config_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953config_t) == 2);
 
-typedef union {
+typedef union {						// 16bit CF Mode
 	struct __attribute__((packed)) { u8_t cf1sel:4; u8_t cf2sel:4; u8_t cf1dis:1; u8_t cf2dis:1; u8_t spare:6; };
 	u16_t val;
 } ade7953cfmode_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953cfmode_t) == 2);
 
-typedef union {
+typedef union {						// 16bit ALTernative OUTput
 	struct __attribute__((packed)) { u8_t zx_alt:4; u8_t zxi_alt:4; u8_t revp_alt:4; u8_t spare:4; };
 	u16_t val;
 } ade7953alt_out_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953alt_out_t) == 2);
 
-typedef union {
+typedef union {						// 24bit ACCumulator Mode
 	struct __attribute__((packed)) {
 	u8_t awattacc:2;	u8_t bwattacc:2;
 	u8_t avaracc:2;		u8_t bvaracc:2;
@@ -342,30 +307,16 @@ typedef struct __attribute__((packed)) {
 typedef struct { i32_t val[ade7953NUM_CHAN * 6]; } ade7953nvs_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953nvs_t) == (ade7953NUM_CHAN * 24));
 
-/*
-typedef struct {
+typedef struct ade7953calib_t {
+	f32_t Iscale[ade7953NUM_CHAN];
+	f32_t Iofst[ade7953NUM_CHAN];
+	f32_t Pscale[ade7953NUM_CHAN];
+	f32_t Escale[ade7953NUM_CHAN];
+	f32_t Igain[ade7953NUM_CHAN];
+	f32_t Vgain;
 	f32_t Vscale;
 	f32_t Vofst;
-	f32_t Iscale0;
-	f32_t Iscale1;
-	f32_t Iosft0;
-	f32_t Iofst1;
-	f32_t Pscale0
-	f32_t Pscale1;
-	f32_t Escale0;
-	f32_t Escale1;
-	f32_t Vgain;
-	f32_t Igain0;
-	f32_t Igain1;
-} ade7953nvs_t;
-*/
-
-typedef struct __attribute__((packed)) ade7953X_t {
-	struct __attribute__((packed)) {
-		u8_t Gain0;										// 1 -> 22
-		u8_t Gain1;										// 1 -> 16
-	};
-} ade7953X_t;
+} ade7953calib_t;
 
 // ####################################### Global variables ########################################
 
