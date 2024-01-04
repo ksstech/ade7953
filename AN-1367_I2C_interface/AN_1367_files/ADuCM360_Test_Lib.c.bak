@@ -1,0 +1,656 @@
+/*
+
+   This sample code is developed by Fermi Lim(fermi.lim@analog.com).
+   Date : 1/30/2015 
+   Feature : To access any internal registers of ADE7953.
+   Written by Fermi Lim(Korean Name : JongSu Lim.
+
+*/
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <ctype.h>
+#include "ADuCM360_Regs.h"
+#include "JongSuLib_V2.h"
+#include "ADuCM360_Test_Lib.h"
+
+uint8_t Pulse=0, GonStop=0;
+uint8_t PowerFlag=0;
+uint8_t szTemp[80];            // Used to store string before printing to UART
+
+unsigned int ReadFlag = 0;
+unsigned int uiMasterRxIndex = 0;
+unsigned int uiMasterTxIndex = 0;
+unsigned char I2CMasterTxDat[6] = {0x01,0x00,0x12,0x34,0x56,0x78};  // to write up to 32-bit data!
+unsigned char ucMasterRxDevAddr[2] = {0x01,0x00};
+unsigned char ucMasterRxDat[4] = {0,0,0,0};													// to read up to 32-bit data!
+unsigned char ucComplete = 0;
+
+TEST_RESULT I2C_Test(void)
+{
+	TEST_RESULT ret_value = PASSED;
+
+	char d, addr=0, DevAddr=0;
+	int state;
+	uint16_t OldCLKDIS=0, OldGP2CON=*pGP2CON, OldGP2PUL=*pGP2PUL;
+	uint32_t RegVal=0, OldRegVal=0;
+
+	printf("\n==========================================================\n");
+	printf("This Session is about I2C of ADuCM360/361\n");
+
+	OldRegVal=read_reg(0xE000E100);
+	RegVal = OldRegVal | 0x00200000;
+	write_reg(0xE000E100,RegVal);  //ISER = 0xE000E100;
+	
+	// I2C Test Program Section :
+	OldCLKDIS=*pCLKDIS;
+	*pCLKDIS &=0x03F3;  // UART, I2C Clock Enable.
+	// I2C configuration 
+	*pI2CDIV=0x1312;	// I2C is used by Fast Mode(400[KHz])
+	*pGP2CON |= 0x05; // p2.0 will be used SCL, P2.1 will be used SDA.
+	*pGP2PUL=0xFC;		// the internal pull-up on conrresponding GPIO P2.0 and P2.1 are disabled
+	*pI2CMCON = 0x131; // Master Enable, Transmit/Receive Request Interrupt Enable, Transactions completed(or Stop detected) interrupt enable.
+
+	while(1)
+	{	   
+		switch(DevAddr){
+		case 0x0  :	
+			printf("LoveJongSu/I2C]");
+			break;
+		case 0x1  :	
+			printf("LoveJongSu/ADE7953]");
+			break;
+		default:														   
+			break;
+		}
+
+		state = gets(szTemp);
+		d=szTemp[0];
+		if (((d == 'm') ||(d == 's')) &&(Cap2Low(szTemp[1]) != 'e'))	{
+			addr = d;
+		} else if (d == RETURN ) {			
+			addr = 'r';
+		} else if (Cap2Low(d) == 'g') {
+			I2C_MemoryGet((char *)szTemp);
+			addr = 'r';
+		} else if (Cap2Low(d) == 's') {
+			I2C_MemorySet((char *)szTemp);
+			addr='r'; 
+		} else {
+			addr = hextoint(szTemp);
+		}
+		szTemp[0] = 0;
+		switch(addr){
+		case 0x1  :	
+			ret_value=ADE7953_Ex();
+			printf("*  1. I2C test on ADE7953 Slave and ADuCM360/361 Master *\n");   
+			printf("*   -> Write 0x1234 16-bit data into 0x100 ADE7953 internal register *\n");   
+			printf("*   -> After reading 0x100 ADE7953 internal register, show... *\n");   			
+			DevAddr=1;     
+			break;
+		case 's'  :	
+			I2C_menu_display();								
+			DevAddr=0;
+			break;
+		case 'm'  :	
+			menu_display();				
+			DevAddr=0;
+			ret_value=FAILED;					
+			break;
+		default:														   
+			break;
+		}
+		if (ret_value == FAILED) {
+			break;
+		}
+		state&=state;
+	}
+
+	*pCLKDIS = OldCLKDIS;
+	// Returning the value of ISER as before.
+	write_reg(0xE000E180,0x00200000);  // ICER = 0xE000E180;
+	write_reg(0xE000E100,OldRegVal);  // ISER = 0xE000E100;
+	return ret_value;
+}
+
+
+#define MOD8(x)		(0x7&(x))
+void I2C_MemoryGet(char *str1)
+{
+	uint32_t memAddr, memVal;
+	char str2[]="", str3[]="";
+	char Ch=' ';
+	char *ptr=NULL;
+	int i;	
+
+	uint32_t uValue;	
+	uint32_t cnt = 0;	
+
+
+	ptr=strchr(str1,Ch);
+	if (ptr == NULL)
+	{
+		return;
+	}
+	Ch=tolower(*(ptr+2));
+	if (Ch == 'x')
+	{
+		for(i=0;i<8;i++)
+		{
+			if((*(ptr+3+i)) != ' ')
+			{
+				str2[i]=*(ptr+3+i);
+			} else
+			{
+				str2[i]='\0';
+				break;
+			}
+		} 
+		memAddr=stoi(str2);
+		strcpy(str2,(&ptr[0]+3+i));
+	} else
+	{
+		for(i=0;i<8;i++)
+		{
+			if((*(ptr+1+i)) != ' ')
+			{
+				str2[i]=*(ptr+1+i);
+			} else
+			{
+				str2[i]='\0';
+				break;
+			}
+		} 
+		memAddr=stoi(str2);
+		strcpy(str2,(&ptr[0]+1+i));
+	}
+
+	if ((memAddr >= 0x4000) && (memAddr != 0x0702) && (memAddr != 0x0800)) 
+	{
+		printf("The specified address is out of range in ADE7953 internal register set!!!\n");
+		printf("The address you typed is 0x%x.\n",memAddr);
+		return;
+	}
+
+	Ch=' ';
+	ptr=strchr(str2,Ch);
+	Ch=tolower(*(ptr+2));
+	if (Ch == 'x')
+	{
+		for(i=0;i<8;i++)
+		{
+			if(((*(ptr+3+i)) != ' ') && ((*(ptr+3+i)) != '\0'))
+			{
+				str3[i]=*(ptr+3+i);
+			} else
+			{
+				str3[i]='\0';
+				break;
+			}
+		}
+		memVal=stoi(str3);
+	} else
+	{
+		for(i=0;i<8;i++)
+		{
+			if(((*(ptr+1+i)) != ' ') && ((*(ptr+1+i)) != '\0'))
+			{
+				str3[i]=*(ptr+1+i);
+			} else
+			{
+				str3[i]='\0';
+				break;
+			}
+		}
+		memVal=atoi(str3);
+	}
+
+
+	for(cnt=0;cnt<memVal;cnt++)
+	{
+		ucMasterRxDevAddr[1]=(uint8_t)memAddr;
+		ucMasterRxDevAddr[0]=(uint8_t)(memAddr>>8);
+
+		I2C_Read_ADE7953();
+
+		switch(ucMasterRxDevAddr[0]) {
+				case 0x0 :
+				case 0x7 :
+				case 0x8 :
+					{ 
+						// Write 8 bits of iTx to I2CMTX ro I2CSTX
+						uValue=((uint32_t)(ucMasterRxDat[0]));
+						break;
+					}
+				case 0x1 :
+					{
+						// Write 16 bits of iTx to I2CMTX ro I2CSTX
+						uValue=(((uint32_t)(ucMasterRxDat[0]))<<8)|(((uint32_t)(ucMasterRxDat[1])));
+						break;
+					}			   
+				case 0x2 :
+					{
+						// Write 24 bits of iTx to I2CMTX ro I2CSTX
+						uValue=(((uint32_t)(ucMasterRxDat[0]))<<16)|(((uint32_t)(ucMasterRxDat[1]))<<8)|((uint32_t)(ucMasterRxDat[2]));
+						break;
+					}						   
+				default :
+					{
+						// Write 32 bits of iTx to I2CMTX ro I2CSTX
+						uValue=(((uint32_t)(ucMasterRxDat[0]))<<24)|(((uint32_t)(ucMasterRxDat[1]))<<16)|
+						(((uint32_t)(ucMasterRxDat[2]))<<8)|((uint32_t)(ucMasterRxDat[3]));
+						break;
+					}									   
+				}		
+
+		if(MOD8(cnt)==0)
+		{
+			printf("0x%x   ",memAddr);
+		}		
+		if(MOD8(cnt)==7)
+		{
+			printf("0x%x\n",uValue);
+		}
+		else
+		{
+			printf("0x%x ",uValue);
+		}
+		memAddr++;
+	}
+	printf("\n");
+
+}
+
+
+void I2C_MemorySet(char *str1)
+{
+	uint32_t memAddr, memVal;
+	char str2[]="", str3[]="";
+	char Ch=' ';
+	char *ptr=NULL;
+	int i;	
+
+	ptr=strchr(str1,Ch);
+	if (ptr == NULL)
+	{
+		return;
+	}
+	Ch=tolower(*(ptr+2));
+	if (Ch == 'x')
+	{
+		for(i=0;i<8;i++)
+		{
+			if((*(ptr+3+i)) != ' ')
+			{
+				str2[i]=*(ptr+3+i);
+			} else
+			{
+				str2[i]='\0';
+				break;
+			}
+		} 
+		memAddr=stoi(str2);
+		strcpy(str2,(&ptr[0]+3+i));
+	} else
+	{
+		for(i=0;i<8;i++)
+		{
+			if((*(ptr+1+i)) != ' ')
+			{
+				str2[i]=*(ptr+1+i);
+			} else
+			{
+				str2[i]='\0';
+				break;
+			}
+		} 
+		memAddr=stoi(str2);
+		strcpy(str2,(&ptr[0]+1+i));
+	}
+
+	if ((memAddr >= 0x4000) && (memAddr != 0x0702) && (memAddr != 0x0800)) 
+	{
+		printf("The specified address is out of range in ADE7953 internal register set!!!\n");
+		printf("The address you typed is 0x%x.\n",memAddr);
+		return;
+	}
+
+	Ch=' ';
+	ptr=strchr(str2,Ch);
+	Ch=tolower(*(ptr+2));
+	if (Ch == 'x')
+	{
+		for(i=0;i<8;i++)
+		{
+			if(((*(ptr+3+i)) != ' ') && ((*(ptr+3+i)) != '\0'))
+			{
+				str3[i]=*(ptr+3+i);
+			} else
+			{
+				str3[i]='\0';
+				break;
+			}
+		}
+		memVal=stoi(str3);
+	} else
+	{
+		for(i=0;i<8;i++)
+		{
+			if(((*(ptr+1+i)) != ' ') && ((*(ptr+1+i)) != '\0'))
+			{
+				str3[i]=*(ptr+1+i);
+			} else
+			{
+				str3[i]='\0';
+				break;
+			}
+		}
+		memVal=atoi(str3);
+	}
+
+	I2CMasterTxDat[0]=(uint8_t)(memAddr>>8);
+	I2CMasterTxDat[1]=(uint8_t)memAddr;
+
+	switch(I2CMasterTxDat[0]) {
+	case 0x0 :
+	case 0x7 :
+	case 0x8 :
+		{ 
+			I2CMasterTxDat[2]=(uint8_t)memVal;
+			break;
+		}
+	case 0x1 :
+		{
+			I2CMasterTxDat[2]=(uint8_t)(memVal>>8);
+			I2CMasterTxDat[3]=(uint8_t)memVal;				
+			break;
+		}			   
+	case 0x2 :
+		{
+			I2CMasterTxDat[2]=(uint8_t)(memVal>>16);
+			I2CMasterTxDat[3]=(uint8_t)(memVal>>8);				
+			I2CMasterTxDat[4]=(uint8_t)memVal;				
+			break;
+		}			   			   
+	default :
+		{
+			I2CMasterTxDat[2]=(uint8_t)(memVal>>24);
+			I2CMasterTxDat[3]=(uint8_t)(memVal>>16);				
+			I2CMasterTxDat[4]=(uint8_t)(memVal>>8);				
+			I2CMasterTxDat[4]=(uint8_t)memVal;				
+			break;
+		}			   			   			   
+	}
+	I2C_Write_ADE7953();
+}
+
+TEST_RESULT ADE7953_Ex()
+{
+	TEST_RESULT ret_value = PASSED;
+	int uValue,i=0;
+	
+	I2CMasterTxDat[0] = 0x01;	// to write up to 32-bit data!
+	I2CMasterTxDat[1] = 0x00;	// to write up to 32-bit data!
+	I2CMasterTxDat[2] = 0x12;	// to write up to 32-bit data!
+	I2CMasterTxDat[3] = 0x34;	// to write up to 32-bit data!
+	
+	I2C_Write_ADE7953();
+	for(i=0;i<3;i++)
+	{
+		printf(" ");
+	}
+
+  ucMasterRxDevAddr[0] = 0x01;
+	ucMasterRxDevAddr[1] = 0x00;
+	I2C_Read_ADE7953();
+	
+	uValue=(((uint32_t)(ucMasterRxDat[0]))<<8)|(((uint32_t)(ucMasterRxDat[1])));
+
+	printf("0x%x \n",uValue);	
+
+	return ret_value;
+}
+
+void I2C_Write_ADE7953(void)
+{
+	int i=0;
+	// Write operation : 0x007(PGA_V), writing 0x12 at the register!
+	if (((I2CMasterTxDat[0] >=4) && (I2CMasterTxDat[0] <= 6))||((I2CMasterTxDat[0] >=9))) {
+		printf("The speicifed ADE7953 register address is out of range\n");
+	} else {
+		ReadFlag=0;
+		uiMasterTxIndex = 0;
+		*pI2CMTX = I2CMasterTxDat[uiMasterTxIndex++]; // Master case : send 1st data
+		I2cMWrCfg(0x70);
+		while (!ucComplete){}
+		ucComplete = 0;
+	}
+}
+
+void I2C_Read_ADE7953(void)
+{
+    uint32_t i=0;
+	// Read operation : Should read 0x12 from the 0x007(PGA_V) register!
+	if (((ucMasterRxDevAddr[0] >=4) && (ucMasterRxDevAddr[0] <= 6))||((ucMasterRxDevAddr[0] >=9))) {
+		printf("The speicifed ADE7953 register address is out of range\n");
+	} else {
+		ReadFlag=1;
+		uiMasterTxIndex = 0;
+		// The first step :
+		*pI2CMTX = ucMasterRxDevAddr[uiMasterTxIndex++]; // Master case : send 1st data
+		I2cMWrCfg(0x70);
+		while (!ucComplete){}
+		ucComplete = 0;
+		// The second step :
+		switch(ucMasterRxDevAddr[0]) {
+		case 0x0 :
+		case 0x7 :
+		case 0x8 :
+			{ 
+				I2cMRdCfg(0x70, 1, 0); // Write 8 bits of iTx to I2CMTX ro I2CSTX
+				break;
+			}
+		case 0x1 :
+			{
+				I2cMRdCfg(0x70, 2, 0); // Write 16 bits of iTx to I2CMTX ro I2CSTX
+				break;
+			}			   
+		case 0x2 :
+			{
+				I2cMRdCfg(0x70, 3, 0); // Write 24 bits of iTx to I2CMTX ro I2CSTX
+				break;
+			}			   			   
+		default :
+			{
+				I2cMRdCfg(0x70, 4, 0); // Write 32 bits of iTx to I2CMTX ro I2CSTX
+				break;
+			}			   			   			   
+		}				
+	}
+	
+	for(i=0;i<3;i++)
+	{
+		printf(" ");
+	}
+
+}
+
+// Configure I2CMRXCNT - Master read control register.
+int I2cMRdCfg(unsigned int uiDevAddr, int iNumBytes, int iExt)
+{
+	*pI2CMRXCNT = (iNumBytes - 1);
+	*pI2CMRXCNT |= iExt;
+	if (uiDevAddr > 0xFF)  		// Check for 10-bit address
+	{
+		*pI2CADR1	= (uiDevAddr & 0xFF);
+		*pI2CADR0	= ((uiDevAddr >> 7) & 0x6) | 0xF0;
+	}
+	else
+	{
+		*pI2CADR0 = uiDevAddr & 0xFF;
+		*pI2CADR1 = 0x00;
+	}
+	*pI2CADR0 |= 0x1;			// Ensure read bit is set to 1
+	return 1;
+}
+
+
+// Configure I2CADR0/I2CADR1 - Device address register.
+int I2cMWrCfg(unsigned int uiDevAddr)
+{
+	uiDevAddr &= 0xFFFE;		// Ensure write bit is configured
+	if (uiDevAddr > 0xFF)  	// Check for 10-bit address
+	{
+		*pI2CADR1 = (uiDevAddr & 0xFF);
+		*pI2CADR0	= ((uiDevAddr >> 7) & 0x6) | 0xF0;
+	}
+	else
+	{
+		*pI2CADR0 = uiDevAddr & 0xFF;
+		*pI2CADR1 = 0x00;
+	}
+	return 1;
+}
+
+void I2C0_Master_Int_Handler(void)
+{
+	unsigned int uiStatus;	
+	uiStatus = *pI2CMSTA; 
+
+	if((uiStatus & I2CMSTA_RXREQ) == I2CMSTA_RXREQ)	// Master Recieve IRQ
+	{
+		ucMasterRxDat[uiMasterRxIndex++] = *pI2CMRX;   	
+
+		switch(ucMasterRxDevAddr[0]) {
+		case 0x0 :
+		case 0x7 :
+		case 0x8 :
+			{ 
+				uiMasterRxIndex = 0;		
+				break;
+			}
+		case 0x1 :
+			{
+				if(uiMasterRxIndex > 1)			 // Resetting value of i if it has been incremented by RX
+				uiMasterRxIndex = 0;		
+				break;
+			}			   
+		case 0x2 :
+			{
+				if(uiMasterRxIndex > 2)			 // Resetting value of i if it has been incremented by RX
+				uiMasterRxIndex = 0;		
+				break;
+			}			   			   
+		default :
+			{
+				if(uiMasterRxIndex > 3)			 // Resetting value of i if it has been incremented by RX
+				uiMasterRxIndex = 0;		
+				break;
+			}			   			   			   
+		}						
+	}
+
+	if((uiStatus & I2CMSTA_TXREQ) == I2CMSTA_TXREQ) // Master Transmit IRQ	
+	{
+		if (ReadFlag == 0)
+		{
+			switch(I2CMasterTxDat[0]) {
+			case 0x0 :
+			case 0x7 :
+			case 0x8 :
+				{
+					if (uiMasterTxIndex < 3 ) {				// Write 8 bits of iTx to I2CMTX ro I2CSTX
+						*pI2CMTX = I2CMasterTxDat[uiMasterTxIndex++];						
+					} else {							
+						*pI2CMCON = 0x0111; // TXREQ disabled to avoid multiple unecessary interrupts :      
+					}
+					break;
+				}
+			case 0x1 :
+				{
+					if (uiMasterTxIndex < 4 ) {				// Write 16 bits of iTx to I2CMTX ro I2CSTX
+						*pI2CMTX = I2CMasterTxDat[uiMasterTxIndex++];						
+					} else {							
+						*pI2CMCON = 0x0111; // TXREQ disabled to avoid multiple unecessary interrupts :      
+					}
+					break;
+				}			   
+			case 0x2 :
+				{
+					if (uiMasterTxIndex < 5 ) {				// Write 24 bits of iTx to I2CMTX ro I2CSTX
+						*pI2CMTX = I2CMasterTxDat[uiMasterTxIndex++];						
+					} else {							
+						*pI2CMCON = 0x0111; // TXREQ disabled to avoid multiple unecessary interrupts :      
+					}
+					break;
+				}			   			   
+			default :
+				{
+					if (uiMasterTxIndex < 6 ) {				// Write 32 bits of iTx to I2CMTX ro I2CSTX
+						*pI2CMTX = I2CMasterTxDat[uiMasterTxIndex++];						
+					} else {							
+						*pI2CMCON = 0x0111; // TXREQ disabled to avoid multiple unecessary interrupts :      
+					}
+					break;
+				}			   			   			   
+			} 
+		} else
+		{
+			if (uiMasterTxIndex < 2 ) {
+				// Write 8 bits of iTx to I2CMTX ro I2CSTX
+				*pI2CMTX = ucMasterRxDevAddr[uiMasterTxIndex++];
+			} else {
+				// TXREQ disabled to avoid multiple unecessary interrupts : 
+				*pI2CMCON = 0x0111;      
+			}
+		}
+	}	
+
+	if((uiStatus & I2CMSTA_TCOMP_SET) == I2CMSTA_TCOMP_SET) // communication complete	
+	{
+		// TXREQ enabled for future master transmissions : *pI2CMCON = 0x0131;     
+		*pI2CMCON = 0x0131;   
+		ucComplete = 1;
+	}
+#ifndef FermiEmulation_Mode // For SRAM and Flash writing in sequence.
+	__asm{ nop}
+	__asm{ nop}
+	__asm{ nop}
+	__asm{ DSB}
+	__asm{ nop}
+	__asm{ nop}
+#endif	
+
+}
+
+void I2C_menu_display()
+{
+	printf("**********************************************************************************\n");
+	printf("**                                                                               \n");		
+	printf("**   Note :                                                                      \n");					 
+	printf("**   ADuCM360/361 Master and Other Slave Devices I2C Test                        \n");			
+	printf("**                                                                               \n");		
+	printf("**                       2014, 10, 22  By Lim Jong Su                             \n");	 
+	printf("**                                                                               \n");		
+	printf("**********************************************************************************\n");
+	printf("*  1. ADuCM360/361 and ADE7953 I2C Test  *\n");        
+
+}
+
+void UART_ISR(void)
+{
+	volatile unsigned char ucCOMIID0 = 0;
+
+	ucCOMIID0 = *pCOMIIR;   // Read UART Interrupt ID register
+	if ((ucCOMIID0 & 0x7) == 0x2)       // Transmit buffer empty
+	{
+		ucTxBufferEmpty = 1;
+	}
+	if ((ucCOMIID0 & 0x7) == 0x4)       // // Receive byte
+	{
+		GetStrTmp=*pCOMTX_RX;
+		ucWaitForUart = 1;
+	}
+}
+

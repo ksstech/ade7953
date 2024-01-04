@@ -1,0 +1,10 @@
+--cpu Cortex-M3
+".\debug\aducm360startup.o"
+".\debug\aducm360_regs.o"
+".\debug\jongsulib_v2.o"
+".\debug\aducm360_test_lib.o"
+".\debug\aducm360_i2c_appnote.o"
+--strict --scatter ".\Debug\ADuCM360_AppNote.sct"
+--summary_stderr --info summarysizes --map --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\ADuCM360_AppNote.map" -o .\Debug\ADuCM360_AppNote.axf
