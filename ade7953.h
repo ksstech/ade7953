@@ -1,5 +1,5 @@
 /*
- * ade7953.h
+ * ade7953.h - Copyright (c) 2023-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
  */
 
 #pragma		once
@@ -157,19 +157,19 @@ enum ade7953_gain { ade7953_GAIN_1, ade7953_GAIN_2, ade7953_GAIN_4, ade7953_GAIN
 
 // ######################################### Structures ############################################
 
-typedef union {						 // 8bit DISNOLOAD
+typedef union ade7953_cfgdnl_t {	// 8bit DISNOLOAD
 	struct  __attribute__((packed)) { u8_t ap:1; u8_t var:1; u8_t va:1; u8_t spare:5; };
 	u8_t val;
-} ade7953dnl_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953dnl_t) == 1);
+} ade7953_cfgdnl_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_cfgdnl_t) == 1);
 
 typedef union {
 	struct __attribute__((packed)) {
 		u8_t alwatt:1; u8_t blwatt:1; u8_t alvar:1; u8_t blvar:1; u8_t alva:1; u8_t blva:1; u8_t rstr:1; u8_t spare:1;
 	};
 	u8_t val;
-} ade7953lcm_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953lcm_t) == 1);
+} ade7953_cfglcm_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_cfglcm_t) == 1);
 
 typedef union {						// 16bit CONFIG
 	struct __attribute__((packed)) {
@@ -189,20 +189,20 @@ typedef union {						// 16bit CONFIG
 		u8_t COMM_LOCK : 1;
 	};
 	u16_t val;
-} ade7953config_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953config_t) == 2);
+} ade7953_config_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_config_t) == 2);
 
 typedef union {						// 16bit CF Mode
 	struct __attribute__((packed)) { u8_t cf1sel:4; u8_t cf2sel:4; u8_t cf1dis:1; u8_t cf2dis:1; u8_t spare:6; };
 	u16_t val;
-} ade7953cfmode_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953cfmode_t) == 2);
+} ade7953_cfmode_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_cfmode_t) == 2);
 
 typedef union {						// 16bit ALTernative OUTput
 	struct __attribute__((packed)) { u8_t zx_alt:4; u8_t zxi_alt:4; u8_t revp_alt:4; u8_t spare:4; };
 	u16_t val;
-} ade7953alt_out_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953alt_out_t) == 2);
+} ade7953_altout_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_altout_t) == 2);
 
 typedef union {						// 24bit ACCumulator Mode
 	struct __attribute__((packed)) {
@@ -217,8 +217,8 @@ typedef union {						// 24bit ACCumulator Mode
 	u8_t rsvd2:2;
 	};
 	x24_t val;
-} ade7953accmode_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953accmode_t) == 3);
+} ade7953_accmode_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_accmode_t) == 3);
 
 typedef union {						// 24bit IRQENA / IRQSTATA registers
 	struct __attribute__((packed)) {
@@ -248,8 +248,8 @@ typedef union {						// 24bit IRQENA / IRQSTATA registers
 	};
 	struct __attribute__((packed)) { u32_t val : 24; };
 	u8_t u8[3];
-} ade7953irqa_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953irqa_t) == 3);
+} ade7953_enirqa_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_enirqa_t) == 3);
 
 typedef union {						// 24bit IRQENB / IRQSTATB registers
 	struct __attribute__((packed)) {
@@ -271,8 +271,8 @@ typedef union {						// 24bit IRQENB / IRQSTATB registers
 	};
 	struct __attribute__((packed)) { u32_t val : 24; };
 	u8_t u8[3];
-} ade7953irqb_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953irqb_t) == 3);
+} ade7953_enirqb_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_enirqb_t) == 3);
 
 typedef union {						// 24bit x3 NoLoad levels
 	struct __attribute__((packed)) {
@@ -281,33 +281,43 @@ typedef union {						// 24bit x3 NoLoad levels
 		x24_t VA_NOLOAD;
 	};
 	x24_t reg[3];
-} ade7953_dnl_t;
-DUMB_STATIC_ASSERT(sizeof(ade7953_dnl_t) == 9);
+} ade7953_valdnl_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_valdnl_t) == 9);
 
-typedef struct __attribute__((packed)) reg_oth_t {		// Registers NOT related to endpoints
-	ade7953irqa_t ie_a, is_a;		// 6
-	#if(ade7953USE_CH2 > 0)								// Line 2 / Neutral
-	ade7953irqb_t ie_b, is_b;		// 6
-	#endif
-	ade7953config_t cfg;			// 2
-	ade7953cfmode_t cfmode;			// 2
-	ade7953alt_out_t alt_out;		// 2
-	ade7953accmode_t accmode;		// 3
-	ade7953dnl_t disnoload;			// 1
-	ade7953lcm_t lcycmode;			// 1
-	u8_t ver;
-} reg_oth_t;
+typedef union ade7953_calib_t {		// 5x24bit + 1x16bit calibration per channel
+	struct __attribute__((packed)) ade7953_calib_s {
+		x24_t IGAINA;
+		x24_t VGAINA;
+		x24_t WGAINA;
+		x24_t VARGAINA;
+		x24_t VAGAINA;
+		x16_t PHCALA;
+	} ade7953_calib_s;
+	u8_t buf[sizeof(struct ade7953_calib_s)];
+} ade7953_calib_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_calib_t) == 17);
 
 struct i2c_di_t;
 typedef struct __attribute__((packed)) {
 	struct i2c_di_t * psI2C;
 	void (*cb)(void *);
-	i32_t cal[ade7953NUM_CHAN * 6];
-	reg_oth_t oth;
-	ade7953_dnl_t dnl;
+	// ### Status registers ###
+	ade7953_enirqa_t ie_a, is_a;	// 6
+	#if(ade7953USE_CH2 > 0)								// Line 2 / Neutral
+	ade7953_enirqb_t ie_b, is_b;	// 6
+	#endif
+	ade7953_config_t config;		// 2
+	ade7953_cfmode_t cfmode;		// 2
+	ade7953_altout_t alt_out;		// 2
+	ade7953_cfgdnl_t cfgdnl;		// 1
+	ade7953_cfglcm_t cfglcm;		// 1
+	ade7953_accmode_t accmode;		// 3
+	ade7953_valdnl_t valdnl;		// 9
+	u8_t ver;
+	ade7953_calib_t calib[ade7953NUM_CHAN];
 } ade7953_t;
 
-typedef struct ade7953_cfgbuf_t {
+typedef struct ade7953_defaults_t {	// contain values to be used for [initial] config
 	i32_t cal[6]; 
 	i32_t dnl[3];
 	f32_t Iscale[ade7953NUM_CHAN];
@@ -318,13 +328,13 @@ typedef struct ade7953_cfgbuf_t {
 	f32_t Vgain;
 	f32_t Vscale;
 	f32_t Vofst;
-} ade7953_cfgbuf_t;
+} ade7953_defaults_t;
 
 // ####################################### Global variables ########################################
 
 extern u8_t NumADE7953;
-extern ade7953_t sADE7953[];
-extern const ade7953_cfgbuf_t sADE7953Defaults;
+extern ade7953_t sADE7953[halHAS_ADE7953];
+extern const ade7953_defaults_t sADE7953Defaults;
 
 // ####################################### Global functions ########################################
 

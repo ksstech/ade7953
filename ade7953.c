@@ -1,5 +1,5 @@
 /*
- * ade7953.c - Copyright (c) 2023 Andre M. Maree / KSS Technologies (Pty) Ltd.
+ * ade7953.c - Copyright (c) 2023-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
  * References:
  * https://devices.esphome.io/devices/Shelly-Plus-2PM
  * https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_xnrg_energy/xnrg_07_ade7953.ino
@@ -50,7 +50,9 @@ static const u16_t aRegCFG[ade7953NUM_CHAN][6] = {
 
 static const u16_t aRegDNL[3] = {regAP_NOLOAD, regVAR_NOLOAD, regVA_NOLOAD };
 
-const ade7953_cfgbuf_t sADE7953Defaults = {
+// ######################################### Structures ############################################
+
+const ade7953_defaults_t sADE7953Defaults = {
 		//	 IGAIN		VGAIN	WGAIN	VARGAIN	 VAGAIN	 PHCAL
 	.cal = { 4194303, 1613194, 2723574, 2723574, 2723574, 200},
 		//	AP VAR VA
@@ -87,12 +89,12 @@ const ade7953_cfgbuf_t sADE7953Defaults = {
 
 // ###################################### Private variables ########################################
 
-static ade7953_cfgbuf_t sADE7953CfgBuf;
+static ade7953_defaults_t sADE7953CfgBuf;
 
 // ####################################### Public variables ########################################
 
-u8_t NumADE7953 = 0;
-ade7953_t sADE7953[halHAS_ADE7953] = { 0 };	
+u8_t NumADE7953;
+ade7953_t sADE7953[halHAS_ADE7953];	
 
 // ############################### common support routines #########################################
 
@@ -196,8 +198,8 @@ int ade7953ReadValue(ade7953_t * psADE7953, u16_t Reg, void * pV, i32_t * pI32, 
 }
 
 u16_t ade7953ReadConfig(ade7953_t * psADE7953) {
-	int iRV = ade7953Read(psADE7953, regCONFIG, &psADE7953->oth.cfg.val);
-	return (iRV < erSUCCESS) ? 0 : psADE7953->oth.cfg.val;
+	int iRV = ade7953Read(psADE7953, regCONFIG, &psADE7953->config.val);
+	return (iRV < erSUCCESS) ? 0 : psADE7953->config.val;
 }
 
 int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pV, u32_t ANDmask, u32_t ORmask) {
@@ -235,7 +237,7 @@ exit:
  */
 void IRAM_ATTR ade7953IRQ_CB(void * Arg) {
 	CPTL(); ade7953_t * psADE7953 = (ade7953_t *) Arg;
-	ade7953ReportStatus(NULL, psADE7953);
+	ade7953ReportIRQs(NULL, psADE7953);
 }
 
 /**
@@ -250,11 +252,11 @@ void IRAM_ATTR ade7953IntHandler(void * Arg) {
 
 	// schedule 1st read, just to update in SRAM
 	psADE7953->cb = NULL;
-	ade7953Read(psADE7953, regRSTIRQSTATA, &psADE7953->oth.is_a);
+	ade7953Read(psADE7953, regRSTIRQSTATA, &psADE7953->is_a);
 
 	// schedule 2nd read with callback handler
 	psADE7953->cb = &ade7953IRQ_CB;
-	ade7953Read(psADE7953, regRSTIRQSTATB, &psADE7953->oth.is_b);
+	ade7953Read(psADE7953, regRSTIRQSTATB, &psADE7953->is_b);
 }
 
 void ade7953InitIRQ(int DevIdx) {
@@ -277,11 +279,11 @@ void ade7953InitIRQ(int DevIdx) {
 */
 int ade7953LoadNVSCalib(u8_t Idx) {
 	IF_myASSERT(debugPARAM, Idx < ade7953_NUM_CONFIGS);
-	size_t Size = ade7953_NUM_CONFIGS * sizeof(ade7953_cfgbuf_t);
-	ade7953_cfgbuf_t * psCal = pvRtosMalloc(Size);
+	size_t Size = ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t);
+	ade7953_defaults_t * psCal = pvRtosMalloc(Size);
 	int iRV = halSTORAGE_ReadBlob(halSTORAGE_STORE, ade7953STORAGE_KEY, psCal, &Size, ESP_ERR_NVS_NOT_FOUND);
-	if ((iRV != erSUCCESS) || (Size != (ade7953_NUM_CONFIGS * sizeof(ade7953_cfgbuf_t)))) {
-		memset(psCal, 0, Size = ade7953_NUM_CONFIGS * sizeof(ade7953_cfgbuf_t));// Clear blob memory
+	if ((iRV != erSUCCESS) || (Size != (ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t)))) {
+		memset(psCal, 0, Size = ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t));// Clear blob memory
 		memcpy(psCal, &sADE7953Defaults, sizeof(sADE7953CfgBuf));		// Reset 1st dataset to defaults
 		iRV = halSTORAGE_WriteBlob(halSTORAGE_STORE, ade7953STORAGE_KEY, psCal, Size);
 		IF_myASSERT(debugRESULT, iRV == erSUCCESS);
@@ -324,8 +326,8 @@ int ade7953SetNoLoadLevel(ade7953_t * psADE7953) {
 	static u8_t const cDisable = 0x07;
 	int iRV = ade7953Write(psADE7953, regDISNOLOAD, (u8_t *) &cDisable);
 	if (iRV >= erSUCCESS) {
-		for (int i = 0; i < NO_ELEM(ade7953_cfgbuf_t, dnl); ++i) {
-			iRV = ade7953WriteValue(psADE7953, aRegDNL[i], &psADE7953->dnl.reg[i], sADE7953CfgBuf.dnl[i]);
+		for (int i = 0; i < NO_ELEM(ade7953_defaults_t, dnl); ++i) {
+			iRV = ade7953WriteValue(psADE7953, aRegDNL[i], &psADE7953->valdnl.reg[i], sADE7953CfgBuf.dnl[i]);
 		}
 		if (iRV >= erSUCCESS) {
 			static u8_t const cEnable = 0x00;
@@ -341,7 +343,7 @@ int ade7953SetNoLoadLevel(ade7953_t * psADE7953) {
 */
 int	ade7953SetCalibration(ade7953_t * psADE7953, u8_t eCh) {
 	int iRV = erSUCCESS;
-	for (int i = 0; i < NO_ELEM(ade7953_cfgbuf_t, cal); ++i) {
+	for (int i = 0; i < NO_ELEM(ade7953_defaults_t, cal); ++i) {
 		u16_t Reg = aRegCFG[eCh][i];
 		i32_t Val = sADE7953CfgBuf.cal[i];
 		if (INRANGE(regPHCALA, Reg, regPHCALB) && Val < 0)
@@ -364,9 +366,9 @@ int	ade7953Identify(i2c_di_t * psI2C) {
 	psI2C->Speed = i2cSPEED_400;
 	psI2C->TObus = 25;
 	psI2C->Test = 1;									// test mode
-	int iRV = ade7953Read(psADE7953, regVERSION, &psADE7953->oth.ver);
+	int iRV = ade7953Read(psADE7953, regVERSION, &psADE7953->ver);
 	if (iRV < erSUCCESS) return iRV;
-	SL_DBG("Silicon Version=0x%0hhX", psADE7953->oth.ver);
+	SL_DBG("Silicon Version=0x%0hhX", psADE7953->ver);
 	psI2C->DevIdx = NumADE7953++;
 	psI2C->IDok = 1;
 	psI2C->Test = 0;
@@ -384,8 +386,8 @@ int ade7953Config(i2c_di_t * psI2C) {
 	psI2C->CFGok = 0;
 	ade7953_t * psADE7953 = &sADE7953[psI2C->DevIdx];
 	psADE7953->psI2C->Test = 1;							// disable handling error we expect to get
-	psADE7953->oth.cfg.val = regCONFIG_SWRST;
-	int iRV = ade7953Write(psADE7953, regCONFIG, &psADE7953->oth.cfg.val);
+	psADE7953->config.val = regCONFIG_SWRST;
+	int iRV = ade7953Write(psADE7953, regCONFIG, &psADE7953->config.val);
 	if (iRV < erSUCCESS) goto exit;
 	psADE7953->psI2C->Test = 0;							// re-enable error handling
 	u32_t Retries = 50;
@@ -395,11 +397,11 @@ int ade7953Config(i2c_di_t * psI2C) {
 			iRV = erTIMEOUT; 
 			break; 
 		}
-		iRV = ade7953Read(psADE7953, regIRQSTATA, &psADE7953->oth.is_a);
-	} while (iRV < erSUCCESS || (psADE7953->oth.is_a.RESET == 0));
+		iRV = ade7953Read(psADE7953, regIRQSTATA, &psADE7953->is_a);
+	} while (iRV < erSUCCESS || (psADE7953->is_a.RESET == 0));
 	if (iRV < erSUCCESS) goto exit;
 
-	iRV = ade7953WriteValue(psADE7953, regCONFIG, &psADE7953->oth.cfg.val, 0x0004);	// Lock comms, enable HPF
+	iRV = ade7953WriteValue(psADE7953, regCONFIG, &psADE7953->config.val, 0x0004);	// Lock comms, enable HPF
 	if (iRV < erSUCCESS) goto exit;
 
 	// Ensure the selected calibration data loaded from NVS blob
@@ -425,7 +427,7 @@ int ade7953Config(i2c_di_t * psI2C) {
 	if (iRV < erSUCCESS) goto exit;
 	#endif
 */
-	iRV = ade7953WriteValue(psADE7953, regLCYCMODE, &psADE7953->oth.lcycmode, 0x40);
+	iRV = ade7953WriteValue(psADE7953, regLCYCMODE, &psADE7953->cfglcm, 0x40);
 	if (iRV < erSUCCESS) goto exit;
 
 	psI2C->CFGok = (ade7953ReadConfig(psADE7953) & 0x8000) ? 0 : 1;
