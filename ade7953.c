@@ -204,30 +204,26 @@ u16_t ade7953ReadConfig(ade7953_t * psADE7953) {
 
 int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pV, u32_t ANDmask, u32_t ORmask) {
 	int Size = ade7953CalcRegSize(Reg);
-	u32_t Mask = 0xFFFFFFFF >> ((4 - Size) * 8);
-	ANDmask &= Mask;
-	ORmask &= Mask;
+	u32_t MAXmask = 0xFFFFFFFF >> ((4 - Size) * 8);
+	ANDmask &= MAXmask;
+	ORmask &= MAXmask;
 	int iRV = erFAILURE;
+	#if 0
+	IF_EXEC_1(debugTIMING, xSysTimerStart, stADE7953R);
+	int iRV = halI2C_Queue(psADE7953->psI2C, i2cWRMW_BD, caBuf, sizeof(caBuf), pV, Size, (i2cq_p1_t)psADE7953->cb, (i2cq_p2_t) (void *)psADE7953);
+	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953R);
+	if (iRV < erSUCCESS) return iRV;
+	#else
 	if (ANDmask || ORmask) {
 		iRV = ade7953Read(psADE7953, Reg, pV);
-		IF_EXIT(iRV < erSUCCESS);
-		x32_t X32 = { 0 };
-		if (Size == 1) X32.x8[0].u8 = *(u8_t *) pV;
-		else if (Size == 2) X32.x16[0].u16 = *(u16_t *) pV;
-		else if (Size == 3) X32.x24 = *(x24_t *) pV;
-		else X32.u32 = *(u32_t*)pV;
-
+		if (iRV < erSUCCESS) goto exit;
+		x32_t X32 = { .i32 = ade7953CalcRegValue(Reg, pV) };
 		X32.u32 &= ANDmask;
 		X32.u32 |= ORmask;
-
-		if (Size == 1) *(u8_t *) pV = X32.x8[0].u8;
-		else if (Size == 2) *(u16_t *) pV = X32.x16[0].u16;
-		else if (Size == 3) *(x24_t *) pV = X32.x24;
-		else *(u32_t *) pV = X32.u32;
-
-		iRV = ade7953WriteValue(psADE7953, Reg, pV, X32.u32);
+		iRV = ade7953WriteValue(psADE7953, Reg, pV, X32.i32);
 	}
 exit:
+	#endif
 	return iRV;
 }
 
