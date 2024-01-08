@@ -350,7 +350,11 @@ int	ade7953Identify(struct i2c_di_t * psI2C);
 int ade7953Config(struct i2c_di_t * psI2C);
 int	ade7953LoadNVSCalib(u8_t Idx);
 struct report_t;
-int ade7953ReportStatus(struct report_t * psRprt, ade7953_t * psADE7953);
+int ade7953ReportConfig(struct report_t * psRprt, ade7953_t * psADE7953);
+int ade7953ReportCalib(struct report_t * psRprt, ade7953_t * psADE7953);
+int ade7953ReportIRQs(struct report_t * psRprt, ade7953_t * psADE7953);
+int ade7953ReportData(struct report_t * psRprt, ade7953_t * psADE7953);
+int ade7953ReportAdjust(struct report_t * psRprt, ade7953_t * psADE7953);
 int ade7953Report(struct report_t * psRprt);
 
 /*
