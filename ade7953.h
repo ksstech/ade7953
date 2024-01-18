@@ -157,6 +157,12 @@ enum ade7953_gain { ade7953_GAIN_1, ade7953_GAIN_2, ade7953_GAIN_4, ade7953_GAIN
 
 // ######################################### Structures ############################################
 
+typedef union ade7953_pga_x_t {		// 8bit PGA_V/IA/IB
+	struct  __attribute__((packed)) { u8_t v; u8_t ia; u8_t ib; };
+	u8_t val[3];
+} ade7953_pga_x_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_pga_x_t) == 3);
+
 typedef union ade7953_cfgdnl_t {	// 8bit DISNOLOAD
 	struct  __attribute__((packed)) { u8_t ap:1; u8_t var:1; u8_t va:1; u8_t spare:5; };
 	u8_t val;
@@ -297,6 +303,13 @@ typedef union ade7953_calib_t {		// 5x24bit + 1x16bit calibration per channel
 } ade7953_calib_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953_calib_t) == 17);
 
+typedef union ade7953_ofst_x_t {	// 3x 24bit
+	struct __attribute__((packed)) { x24_t v; x24_t ia; x24_t ib; };
+	x24_t regs[3];
+//	u8_t buf[sizeof(struct ade7953_ofst_x_s)];
+} ade7953_ofst_x_t;
+DUMB_STATIC_ASSERT(sizeof(ade7953_ofst_x_t) == 9);
+
 struct i2c_di_t;
 typedef struct __attribute__((packed)) {
 	struct i2c_di_t * psI2C;
@@ -313,6 +326,8 @@ typedef struct __attribute__((packed)) {
 	ade7953_cfglcm_t cfglcm;		// 1
 	ade7953_accmode_t accmode;		// 3
 	ade7953_valdnl_t valdnl;		// 9
+	ade7953_ofst_x_t ofst;			// 9
+	ade7953_pga_x_t pga;			// 3
 	u8_t ver;
 	ade7953_calib_t calib[ade7953NUM_CHAN];
 } ade7953_t;
@@ -322,12 +337,12 @@ typedef struct ade7953_defaults_t {	// contain values to be used for [initial] c
 	i32_t dnl[3];
 	f32_t Iscale[ade7953NUM_CHAN];
 	f32_t Iofst[ade7953NUM_CHAN];
+	f32_t Igain[ade7953NUM_CHAN];
 	f32_t Pscale[ade7953NUM_CHAN];
 	f32_t Escale[ade7953NUM_CHAN];
-	f32_t Igain[ade7953NUM_CHAN];
-	f32_t Vgain;
 	f32_t Vscale;
 	f32_t Vofst;
+	f32_t Vgain;
 } ade7953_defaults_t;
 
 // ####################################### Global variables ########################################

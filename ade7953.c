@@ -53,35 +53,22 @@ static const u16_t aRegDNL[3] = {regAP_NOLOAD, regVAR_NOLOAD, regVA_NOLOAD };
 // ######################################### Structures ############################################
 
 const ade7953_defaults_t sADE7953Defaults = {
-		//	 IGAIN		VGAIN	WGAIN	VARGAIN	 VAGAIN	 PHCAL
-	.cal = { 4194303, 1613194, 2723574, 2723574, 2723574, 200},
-		//	AP VAR VA
-	.dnl = { 0, 0, 0 },
-	.Iscale = {	0.00000949523,
-		#if	(ade7953USE_CH2 > 0)
-			0.00000949523,
-		#endif
-	},
-	.Iofst = {	-0.017,
-		#if	(ade7953USE_CH2 > 0)
-			-0.017,
-		#endif
-	},
-	.Pscale = {	1 / 164.0,
-		#if	(ade7953USE_CH2 > 0)
-			1 / 164.0,
-		#endif
-	},
-	.Escale = {	1 / 25240.0,
-		#if	(ade7953USE_CH2 > 0)
-			1 / 25240.0,
-		#endif
-	},
-	.Igain = {	ade7953_GAIN_1,
-		#if	(ade7953USE_CH2 > 0)
-			ade7953_GAIN_1,
-		#endif
-	},
+				//	 IGAIN		VGAIN	WGAIN	VARGAIN	 VAGAIN	 PHCAL
+	.cal 		= { 4194303, 1613194, 2723574, 2723574, 2723574, 200},
+				//	AP VAR VA
+	.dnl 		= { 0, 0, 0 },
+	.Iscale[0]	= 0.00000949523,
+	.Iofst[0]	= -0.017,
+	.Igain[0]	= ade7953_GAIN_1,
+	.Pscale[0]	= 1 / 164.0,
+	.Escale[0]	= 1 / 25240.0,
+	#if	(ade7953USE_CH2 > 0)
+	.Iscale[1]	= 0.00000949523,
+	.Iofst[1]	= -0.017,
+	.Igain[1]	= ade7953_GAIN_1,
+	.Pscale[1]	= 1 / 164.0,
+	.Escale[1]	= 1 / 25240.0,
+	#endif
 	.Vscale = 0.0000382602,
 	.Vofst = -0.068,
 	.Vgain = ade7953_GAIN_1,
@@ -246,13 +233,16 @@ void IRAM_ATTR ade7953IntHandler(void * Arg) {
 	IF_myASSERT(debugPARAM, eDev < halHAS_ADE7953);
 	ade7953_t * psADE7953 = &sADE7953[eDev];
 
-	// schedule 1st read, just to update in SRAM
-	psADE7953->cb = NULL;
+	#if(ade7953USE_CH2 == 0)
+	psADE7953->cb = &ade7953IRQ_CB;						// schedule Chan-A read with CB handler
 	ade7953Read(psADE7953, regRSTIRQSTATA, &psADE7953->is_a);
-
-	// schedule 2nd read with callback handler
-	psADE7953->cb = &ade7953IRQ_CB;
+	#else
+	psADE7953->cb = NULL;								// schedule Chan-A read to update in SRAM
+	ade7953Read(psADE7953, regRSTIRQSTATA, &psADE7953->is_a);
+	psADE7953->cb = &ade7953IRQ_CB;						// schedule Chan-B read with CB handler
 	ade7953Read(psADE7953, regRSTIRQSTATB, &psADE7953->is_b);
+	#endif
+
 }
 
 void ade7953InitIRQ(int DevIdx) {
@@ -296,21 +286,21 @@ int ade7953LoadNVSCalib(u8_t Idx) {
  * @return
 */
 int ade7953SetOffsetGain(ade7953_t * psADE7953) {
-	int iRV = ade7953WriteValue(psADE7953, regVRMSOS, NULL, sADE7953Defaults.Vofst / sADE7953Defaults.Vscale);
+	int iRV = ade7953WriteValue(psADE7953, regVRMSOS, &psADE7953->ofst.v, sADE7953Defaults.Vofst / sADE7953Defaults.Vscale);
 	if (iRV > erFAILURE)
-		iRV = ade7953WriteValue(psADE7953, regAIRMSOS, NULL, sADE7953Defaults.Iofst[0] / sADE7953Defaults.Iscale[0]);
+		iRV = ade7953WriteValue(psADE7953, regAIRMSOS, &psADE7953->ofst.ia, sADE7953Defaults.Iofst[0] / sADE7953Defaults.Iscale[0]);
 	#if	(ade7953USE_CH2 > 0)
 	if (iRV > erFAILURE)
-		iRV = ade7953WriteValue(psADE7953, regBIRMSOS, NULL, sADE7953Defaults.Iofst[1] / sADE7953Defaults.Iscale[1]);
+		iRV = ade7953WriteValue(psADE7953, regBIRMSOS, &psADE7953->ofst.ib, sADE7953Defaults.Iofst[1] / sADE7953Defaults.Iscale[1]);
 	#endif
 
 	if (iRV > erFAILURE)
-		iRV = ade7953WriteValue(psADE7953, regPGA_V, NULL, sADE7953Defaults.Vgain);
+		iRV = ade7953WriteValue(psADE7953, regPGA_V, &psADE7953->pga.v, sADE7953Defaults.Vgain);
 	if (iRV > erFAILURE)
-		iRV = ade7953WriteValue(psADE7953, regPGA_IA, NULL, sADE7953Defaults.Igain[0]);
+		iRV = ade7953WriteValue(psADE7953, regPGA_IA, &psADE7953->pga.ia, sADE7953Defaults.Igain[0]);
 	#if	(ade7953USE_CH2 > 0)
 	if (iRV > erFAILURE)
-		iRV = ade7953WriteValue(psADE7953, regPGA_IB, NULL, sADE7953Defaults.Igain[1]);
+		iRV = ade7953WriteValue(psADE7953, regPGA_IB, &psADE7953->pga.ib, sADE7953Defaults.Igain[1]);
 	#endif
 	return iRV;
 }
@@ -408,21 +398,21 @@ int ade7953Config(i2c_di_t * psI2C) {
 
 	iRV = ade7953WriteValue(psADE7953, regOPTIMUM, NULL, 0x0030);	// enable optimum settings
 	if (iRV < erSUCCESS) goto exit;
-/*
-	iRV = ade7953SetNoLoadLevel(psADE7953);				// step 1 Tasmota
+// ##################################### Accuracy calibration ######################################
+	iRV = ade7953SetOffsetGain(psADE7953);				// #1-MGOS
 	if (iRV < erSUCCESS) goto exit;
 
-	iRV = ade7953SetCalibration(psADE7953, 0);			// step 2 Tasmota
+//	iRV = ade7953SetNoLoadLevel(psADE7953);				// #1-Tasmota
+//	if (iRV < erSUCCESS) goto exit;
+
+	iRV = ade7953SetCalibration(psADE7953, 0);			// #2-Tasmota
 	if (iRV < erSUCCESS) goto exit;
 	
-	iRV = ade7953SetOffsetGain(psADE7953);
-	if (iRV < erSUCCESS) goto exit;
-
 	#if	(ade7953USE_CH2 > 0)
 	iRV = ade7953SetCalibration(psADE7953, 1);
 	if (iRV < erSUCCESS) goto exit;
 	#endif
-*/
+
 	iRV = ade7953WriteValue(psADE7953, regLCYCMODE, &psADE7953->cfglcm, 0x40);
 	if (iRV < erSUCCESS) goto exit;
 
@@ -492,7 +482,7 @@ int ade7953ReportConfig(report_t * psR, ade7953_t * psADE7953) {
 int ade7953ReportCalib(report_t * psR, ade7953_t * psADE7953) {
 	int iRV = wprintfx(psR, "ADE7953 Calibration:\r\n\txIGAIN\txVGAIN\txWGAIN xVARGAIN\txVAGAIN\tPHCALx\r\n");
 	for (int eCh = 0; eCh < ade7953NUM_CHAN; ++eCh) {
-		iRV += wprintfx(psR, "Chan %c\t", eCh + CHR_A);
+		iRV += wprintfx(psR, "Chan%c\t", eCh + CHR_A);
 		u8_t * pReg = psADE7953->calib[eCh].buf;
 		for( int i = 0; i < NO_ELEM(ade7953_defaults_t, cal); ++i) {
 			int Reg = aRegCFG[eCh][i];
@@ -502,8 +492,24 @@ int ade7953ReportCalib(report_t * psR, ade7953_t * psADE7953) {
 		}
 		iRV += wprintfx(psR, strCRLF);
 	}
-	iRV += wprintfx(psR, "VAL DNL: AP=x%06X VAR=x%06X VA=x%06X\r\n", 
+
+	ade7953Read(psADE7953, regPGA_V, (void *) &psADE7953->pga.v);
+	ade7953Read(psADE7953, regPGA_IA, (void *) &psADE7953->pga.ia);
+	ade7953Read(psADE7953, regPGA_IB, (void *) &psADE7953->pga.ib);
+	const u8_t xlatPGA[6] = { 1, 2, 4, 8, 16, 22 };
+	iRV += wprintfx(psR, "PGA_X\tV=%d/%d  IA=%d/%d  IB=%d/%d\r\n", psADE7953->pga.v, xlatPGA[psADE7953->pga.v],
+	psADE7953->pga.ia, xlatPGA[psADE7953->pga.ia], psADE7953->pga.ib, xlatPGA[psADE7953->pga.ib]);
+
+	ade7953Read(psADE7953, regVRMSOS, (void *) &psADE7953->ofst.v);
+	ade7953Read(psADE7953, regAIRMSOS, (void *) &psADE7953->ofst.ia);
+	ade7953Read(psADE7953, regBIRMSOS, (void *) &psADE7953->ofst.ib);
+	iRV += wprintfx(psR, "OFST_X\tV=x%06X  IA=x%06X  IB=x%06X\r\n",
+			psADE7953->ofst.v, psADE7953->ofst.ia, psADE7953->ofst.ib);
+
+	// Add reading of registers to update values in buffers
+	iRV += wprintfx(psR, "DNL_X\tAP=x%06X VAR=x%06X VA=x%06X\r\n", 
 		psADE7953->valdnl.AP_NOLOAD, psADE7953->valdnl.VAR_NOLOAD, psADE7953->valdnl.VA_NOLOAD);
+	
 	return iRV;
 }
 
