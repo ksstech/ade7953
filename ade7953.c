@@ -1,19 +1,11 @@
 /*
  * ade7953.c - Copyright (c) 2023-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
- * References:
- * https://devices.esphome.io/devices/Shelly-Plus-2PM
- * https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_xnrg_energy/xnrg_07_ade7953.ino
- * https://kb.shelly.cloud/knowledge-base/shelly-plus-2pm#Usermanualscommonparts-Installationguides
- * https://github.com/mongoose-os-libs/ade7953
- *
- * Notes & references:
- * Add IRQ handler, use to check for overload and/or overheat, turn off relays
- * mode option to select WHr or KWHr, set default, variable used as divisor
  */
 
-#include "ade7953.h"
+#include "hal_config.h"
 
 #if (halHAS_ADE7953 > 0)
+#include "ade7953.h"
 #include "hal_i2c_common.h"
 #include "hal_options.h"
 #include "hal_storage.h"
@@ -39,6 +31,18 @@
 // ######################################### Structures ############################################
 // ####################################### Private variables #######################################
 
+//				V_Ofst		I_Ofst		V_Scale		Iscale		Pscale		Escale
+//	ESPhome								26000.0		100000.0	154.0		????
+//	TasMota								26000.0		100000.0	154.0					
+//	Mongoose	-0.068		-0.017		26137.0		105318.59	164.0		25240.0
+
+#define	V_Ofst	-0.068
+#define	I_Ofst	-0.017
+#define	V_Scale	26000.0
+#define	I_Scale	10000.0
+#define	P_Scale	154.0
+#define	E_Scale	25240.0
+
 // ###################################### Private constants ########################################
 
 static const u16_t aRegCFG[ade7953NUM_CHAN][6] = {
@@ -53,25 +57,26 @@ static const u16_t aRegDNL[3] = {regAP_NOLOAD, regVAR_NOLOAD, regVA_NOLOAD };
 // ######################################### Structures ############################################
 
 const ade7953_defaults_t sADE7953Defaults = {
-				//	 IGAIN		VGAIN	WGAIN	VARGAIN	 VAGAIN	 PHCAL
-	.cal 		= { 4194303, 1613194, 2723574, 2723574, 2723574, 200},
-				//	AP VAR VA
+	//				 IGAIN	VGAIN	WGAIN  VARGAIN	VAGAIN	PHCAL
+	.cal 		= { 0, 		0, 		0, 		0, 		0, 		0},
+	//				AP VAR VA
 	.dnl 		= { 0, 0, 0 },
-	.Iscale[0]	= 0.00000949523,
-	.Iofst[0]	= -0.017,
+	// Factors used for conversion of I32 to F32
+	.Vgain		= ade7953_GAIN_1,
+	.Vofst		= V_Ofst,
+	.Vscale		= V_Scale,
 	.Igain[0]	= ade7953_GAIN_1,
-	.Pscale[0]	= 1 / 164.0,
-	.Escale[0]	= 1 / 25240.0,
+	.Iofst[0]	= I_Ofst,
+	.Iscale[0]	= I_Scale,
+	.Pscale[0]	= P_Scale,
+	.Escale[0]	= E_Scale,
 	#if	(ade7953USE_CH2 > 0)
-	.Iscale[1]	= 0.00000949523,
-	.Iofst[1]	= -0.017,
 	.Igain[1]	= ade7953_GAIN_1,
-	.Pscale[1]	= 1 / 164.0,
-	.Escale[1]	= 1 / 25240.0,
+	.Iofst[1]	= I_Ofst,
+	.Iscale[1]	= I_Scale,
+	.Pscale[1]	= P_Scale,
+	.Escale[1]	= E_Scale,
 	#endif
-	.Vscale = 0.0000382602,
-	.Vofst = -0.068,
-	.Vgain = ade7953_GAIN_1,
 };
 
 // ###################################### Private variables ########################################
@@ -184,43 +189,52 @@ int ade7953ReadValue(ade7953_t * psADE7953, u16_t Reg, void * pV, i32_t * pI32, 
 	return iRV;
 }
 
+int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pV, u32_t maskAND, u32_t maskOR) {
+	int Size = ade7953CalcRegSize(Reg);
+	u32_t maskMAX = 0xFFFFFFFF >> ((4 - Size) * 8);
+	maskAND &= maskMAX;
+	maskOR &= maskMAX;
+	int iRV = erFAILURE;
+	if (maskAND || maskOR) {
+		u8_t caBuf[2] = { (Reg >> 8) & 0xFF, Reg & 0xFF };
+		iRV = halI2C_Queue(psADE7953->psI2C, i2cWRMW_BS, caBuf, sizeof(caBuf), pV, Size, (i2cq_p1_t) maskAND, (i2cq_p2_t) maskOR);
+	}
+	return iRV;
+}
+
 u16_t ade7953ReadConfig(ade7953_t * psADE7953) {
 	int iRV = ade7953Read(psADE7953, regCONFIG, &psADE7953->config.val);
 	return (iRV < erSUCCESS) ? 0 : psADE7953->config.val;
 }
 
-int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pV, u32_t ANDmask, u32_t ORmask) {
-	int Size = ade7953CalcRegSize(Reg);
-	u32_t MAXmask = 0xFFFFFFFF >> ((4 - Size) * 8);
-	ANDmask &= MAXmask;
-	ORmask &= MAXmask;
-	int iRV = erFAILURE;
-	#if 0
-	IF_EXEC_1(debugTIMING, xSysTimerStart, stADE7953R);
-	int iRV = halI2C_Queue(psADE7953->psI2C, i2cWRMW_BD, caBuf, sizeof(caBuf), pV, Size, (i2cq_p1_t)psADE7953->cb, (i2cq_p2_t) (void *)psADE7953);
-	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953R);
-	if (iRV < erSUCCESS) return iRV;
-	#else
-	if (ANDmask || ORmask) {
-		iRV = ade7953Read(psADE7953, Reg, pV);
-		if (iRV < erSUCCESS) goto exit;
-		x32_t X32 = { .i32 = ade7953CalcRegValue(Reg, pV) };
-		X32.u32 &= ANDmask;
-		X32.u32 |= ORmask;
-		iRV = ade7953WriteValue(psADE7953, Reg, pV, X32.i32);
-	}
+int ade7953SoftReset(ade7953_t * psADE7953) {
+	psADE7953->psI2C->Test = 1;							// disable handling error we expect to get
+	psADE7953->config.val = regCONFIG_SWRST;
+	int iRV = ade7953Write(psADE7953, regCONFIG, &psADE7953->config.val);
+	if (iRV < erSUCCESS) goto exit;
+	psADE7953->psI2C->Test = 0;							// re-enable error handling
+
+	u32_t Retries = 50;
+	do {
+		vTaskDelay(pdMS_TO_TICKS(10));
+		if (!--Retries) {
+			iRV = erTIMEOUT;
+			break;
+		}
+		iRV = ade7953Read(psADE7953, regIRQSTATA, &psADE7953->is_a);	// regRSTIRQSTATA
+	} while (iRV < erSUCCESS || (psADE7953->is_a.RESET == 0));
 exit:
-	#endif
 	return iRV;
 }
 
 // ######################################### IRQ support ###########################################
+
 /*
  * @brief	Callback handler after reading both IRQSTATA & IRQSTATB
+ * @param	pointer to ADE7953 device structure
  */
-void IRAM_ATTR ade7953IRQ_CB(void * Arg) {
-	CPTL(); ade7953_t * psADE7953 = (ade7953_t *) Arg;
-	ade7953ReportIRQs(NULL, psADE7953);
+void IRAM_ATTR ade7953IntCB(void * Arg) {
+	ade7953ReportIRQs(NULL, Arg);
 }
 
 /**
@@ -229,9 +243,8 @@ void IRAM_ATTR ade7953IRQ_CB(void * Arg) {
  * @return
  **/
 void IRAM_ATTR ade7953IntHandler(void * Arg) {
-	CPTL(); u8_t eDev = (int) Arg;
-	IF_myASSERT(debugPARAM, eDev < halHAS_ADE7953);
-	ade7953_t * psADE7953 = &sADE7953[eDev];
+	IF_myASSERT(debugPARAM, (int) Arg < halHAS_ADE7953);
+	PTL(); ade7953_t * psADE7953 = &sADE7953[(int) Arg];
 
 	#if(ade7953USE_CH2 == 0)
 	psADE7953->cb = &ade7953IRQ_CB;						// schedule Chan-A read with CB handler
@@ -239,19 +252,30 @@ void IRAM_ATTR ade7953IntHandler(void * Arg) {
 	#else
 	psADE7953->cb = NULL;								// schedule Chan-A read to update in SRAM
 	ade7953Read(psADE7953, regRSTIRQSTATA, &psADE7953->is_a);
-	psADE7953->cb = &ade7953IRQ_CB;						// schedule Chan-B read with CB handler
+	psADE7953->cb = &ade7953IntCB;						// schedule Chan-B read with CB handler
 	ade7953Read(psADE7953, regRSTIRQSTATB, &psADE7953->is_b);
 	#endif
 
 }
 
-void ade7953InitIRQ(int DevIdx) {
-	gpio_config_t irq_pin_cfg = {
-		.pin_bit_mask = 1ULL << ade7953PIN_IRQ,
-		.mode = GPIO_MODE_INPUT,
-		.pull_up_en = GPIO_PULLUP_DISABLE ,
-		.pull_down_en = GPIO_PULLDOWN_DISABLE,
-		.intr_type = GPIO_INTR_NEGEDGE,
+int ade7953ChangeIntMask(ade7953_t * psADE7953, int eCh, u32_t maskAND, u32_t maskOR) {
+	u16_t Reg;
+	void * pV;
+	if (eCh == 0) {
+		Reg = regIRQENA;
+		pV = &psADE7953->ie_a;
+	} else {
+		Reg = regIRQENB;
+		pV = &psADE7953->ie_b;
+	}
+	return ade7953Update(psADE7953, Reg, pV, maskAND, maskOR);
+}
+
+void ade7953IntConfig(int DevIdx) {
+	gpio_config_t irq_pin_cfg = { .pin_bit_mask = (1ULL << ade7953PIN_IRQ), .mode = GPIO_MODE_INPUT,
+//		.pull_up_en = GPIO_PULLUP_DISABLE, .pull_down_en = GPIO_PULLDOWN_ENABLE, .intr_type = GPIO_INTR_ANYEDGE,
+//		.pull_up_en = GPIO_PULLUP_ENABLE, .pull_down_en = GPIO_PULLDOWN_DISABLE, .intr_type = GPIO_INTR_ANYEDGE,
+		.pull_up_en = GPIO_PULLUP_ENABLE, .pull_down_en = GPIO_PULLDOWN_DISABLE, .intr_type = GPIO_INTR_NEGEDGE,
 	};
 	ESP_ERROR_CHECK(gpio_config(&irq_pin_cfg));
 	halGPIO_IRQconfig(ade7953PIN_IRQ, ade7953IntHandler, (void *) DevIdx);
@@ -285,7 +309,8 @@ int ade7953LoadNVSCalib(u8_t Idx) {
  * @brief
  * @return
 */
-int ade7953SetOffsetGain(ade7953_t * psADE7953) {
+int ade7953SetOffset(ade7953_t * psADE7953) {
+	// check ALL calculation since change of reciprocal in initialised variable at top
 	int iRV = ade7953WriteValue(psADE7953, regVRMSOS, &psADE7953->ofst.v, sADE7953Defaults.Vofst / sADE7953Defaults.Vscale);
 	if (iRV > erFAILURE)
 		iRV = ade7953WriteValue(psADE7953, regAIRMSOS, &psADE7953->ofst.ia, sADE7953Defaults.Iofst[0] / sADE7953Defaults.Iscale[0]);
@@ -293,9 +318,15 @@ int ade7953SetOffsetGain(ade7953_t * psADE7953) {
 	if (iRV > erFAILURE)
 		iRV = ade7953WriteValue(psADE7953, regBIRMSOS, &psADE7953->ofst.ib, sADE7953Defaults.Iofst[1] / sADE7953Defaults.Iscale[1]);
 	#endif
+	return iRV;
+}
 
-	if (iRV > erFAILURE)
-		iRV = ade7953WriteValue(psADE7953, regPGA_V, &psADE7953->pga.v, sADE7953Defaults.Vgain);
+/**
+ * @brief
+ * @return
+*/
+int ade7953SetGain(ade7953_t * psADE7953) {
+	int iRV = ade7953WriteValue(psADE7953, regPGA_V, &psADE7953->pga.v, sADE7953Defaults.Vgain);
 	if (iRV > erFAILURE)
 		iRV = ade7953WriteValue(psADE7953, regPGA_IA, &psADE7953->pga.ia, sADE7953Defaults.Igain[0]);
 	#if	(ade7953USE_CH2 > 0)
@@ -347,11 +378,12 @@ int	ade7953SetCalibration(ade7953_t * psADE7953, u8_t eCh) {
 */
 int	ade7953Identify(i2c_di_t * psI2C) {
 	ade7953_t * psADE7953 = &sADE7953[psI2C->DevIdx];
-	psADE7953->psI2C = psI2C;
 	psI2C->Type = i2cDEV_ADE7953;
 	psI2C->Speed = i2cSPEED_400;
 	psI2C->TObus = 25;
 	psI2C->Test = 1;									// test mode
+	psADE7953->psI2C = psI2C;
+	ade7953IntConfig(psI2C->DevIdx);
 	int iRV = ade7953Read(psADE7953, regVERSION, &psADE7953->ver);
 	if (iRV < erSUCCESS) return iRV;
 	SL_DBG("Silicon Version=0x%0hhX", psADE7953->ver);
@@ -368,42 +400,36 @@ int	ade7953Identify(i2c_di_t * psI2C) {
  */
 int ade7953Config(i2c_di_t * psI2C) {
 	if (!psI2C->IDok) return erINV_STATE;
-
 	psI2C->CFGok = 0;
+
+	if (!psI2C->CFGerr) {								// if 1st time here, not recall ARO an error
+		IF_SYSTIMER_INIT(debugTIMING, stADE7953R, stMICROS, "ADE7953R", 1500, 15000);
+		IF_SYSTIMER_INIT(debugTIMING, stADE7953W, stMICROS, "ADE7953W", 1500, 15000);
+	}
+
 	ade7953_t * psADE7953 = &sADE7953[psI2C->DevIdx];
-	psADE7953->psI2C->Test = 1;							// disable handling error we expect to get
-	psADE7953->config.val = regCONFIG_SWRST;
-	int iRV = ade7953Write(psADE7953, regCONFIG, &psADE7953->config.val);
-	if (iRV < erSUCCESS) goto exit;
-	psADE7953->psI2C->Test = 0;							// re-enable error handling
-	u32_t Retries = 50;
-	do {
-		vTaskDelay(pdMS_TO_TICKS(10));
-		if (!--Retries) {
-			iRV = erTIMEOUT; 
-			break; 
-		}
-		iRV = ade7953Read(psADE7953, regIRQSTATA, &psADE7953->is_a);
-	} while (iRV < erSUCCESS || (psADE7953->is_a.RESET == 0));
+	int iRV = ade7953SoftReset(psADE7953);
 	if (iRV < erSUCCESS) goto exit;
 
 	iRV = ade7953WriteValue(psADE7953, regCONFIG, &psADE7953->config.val, 0x0004);	// Lock comms, enable HPF
 	if (iRV < erSUCCESS) goto exit;
-
-	// Ensure the selected calibration data loaded from NVS blob
-	ade7953LoadNVSCalib(ioB2GET(ade7953NVS));
 
 	iRV = ade7953WriteValue(psADE7953, regUNLOCK, NULL, 0xAD);		// Unlock reg 0x0120
 	if (iRV < erSUCCESS) goto exit;
 
 	iRV = ade7953WriteValue(psADE7953, regOPTIMUM, NULL, 0x0030);	// enable optimum settings
 	if (iRV < erSUCCESS) goto exit;
+
 // ##################################### Accuracy calibration ######################################
+
+/*
+	// Ensure the selected calibration data loaded from NVS blob
+	ade7953LoadNVSCalib(ioB2GET(ade7953NVS));
 	iRV = ade7953SetOffsetGain(psADE7953);				// #1-MGOS
 	if (iRV < erSUCCESS) goto exit;
 
-//	iRV = ade7953SetNoLoadLevel(psADE7953);				// #1-Tasmota
-//	if (iRV < erSUCCESS) goto exit;
+	iRV = ade7953SetNoLoadLevel(psADE7953);				// #1-Tasmota
+	if (iRV < erSUCCESS) goto exit;
 
 	iRV = ade7953SetCalibration(psADE7953, 0);			// #2-Tasmota
 	if (iRV < erSUCCESS) goto exit;
@@ -412,16 +438,20 @@ int ade7953Config(i2c_di_t * psI2C) {
 	iRV = ade7953SetCalibration(psADE7953, 1);
 	if (iRV < erSUCCESS) goto exit;
 	#endif
-
+*/
 	iRV = ade7953WriteValue(psADE7953, regLCYCMODE, &psADE7953->cfglcm, 0x40);
 	if (iRV < erSUCCESS) goto exit;
+	// Enable 
+	iRV = ade7953ChangeIntMask(psADE7953, 0, 0x00FFFFFF, 0x00290000);
+	if (iRV < erSUCCESS) goto exit;
 
-	psI2C->CFGok = (ade7953ReadConfig(psADE7953) & 0x8000) ? 0 : 1;
-	// once off init....
-	if (!psI2C->CFGerr) {
-		IF_SYSTIMER_INIT(debugTIMING, stADE7953R, stMICROS, "ADE7953RD", 1500, 15000);
-		IF_SYSTIMER_INIT(debugTIMING, stADE7953W, stMICROS, "ADE7953WR", 1500, 15000);
-		ade7953InitIRQ(psI2C->DevIdx);
+	iRV = ade7953ReadConfig(psADE7953);
+	if (iRV == 0x0004) {			// 0x8000 must be false, comms must be locked to I2C
+		xRtosSetDevice(devMASK_ADE7953);
+		psI2C->CFGok = 1;
+		iRV = erSUCCESS;
+	} else {
+		iRV = erINV_CONFIG;
 	}
 exit:
 	return iRV;
@@ -556,10 +586,12 @@ int ade7953ReportAdjust(report_t * psR, ade7953_t * psADE7953) { return erFAILUR
 int ade7953Report(report_t * psR) {
 	int iRV = PX("## ADE7953 ##\r\n");
 	for (int i = 0; i < halHAS_ADE7953; ++i) {
-		iRV += ade7953ReportConfig(psR, &sADE7953[i]);
-		iRV += ade7953ReportCalib(psR, &sADE7953[i]);
-		iRV += ade7953ReportIRQs(psR, &sADE7953[i]);
-		iRV += PX(strCRLF);
+		ade7953_t * psADE7953 = &sADE7953[i];
+		iRV += halI2C_DeviceReport(psR, psADE7953->psI2C);
+		iRV += ade7953ReportConfig(psR, psADE7953);
+		iRV += ade7953ReportCalib(psR, psADE7953);
+		iRV += ade7953ReportIRQs(psR, psADE7953);
+		iRV += wprintfx(psR, strCRLF);
 	}
 	return iRV;
 }

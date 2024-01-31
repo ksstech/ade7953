@@ -4,7 +4,6 @@
 
 #pragma		once
 
-#include "hal_config.h"
 #include "definitions.h"
 #include "struct_union.h"
 
@@ -12,7 +11,22 @@
 extern "C" {
 #endif
 
-/* Calibration info
+/* 
+ * Source code examples:
+ * https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_xnrg_energy/xnrg_07_ade7953.ino
+ * https://github.com/mongoose-os-libs/ade7953
+ * https://github.com/esphome/esphome/tree/dev/esphome/components/ade7953
+ * https://github.com/MacWyznawca/ADE7953_ESP8266/blob/master/ADE7953_ESP82.c
+ * 
+ * References:
+ * https://electronics.stackexchange.com/questions/662549/ade7953-voltage-input
+ * https://devices.esphome.io/devices/Shelly-Plus-2PM
+ * https://kb.shelly.cloud/knowledge-base/shelly-plus-2pm#Usermanualscommonparts-Installationguides
+ * https://esphome.io/components/sensor/ade7953.html
+ * https://www.eeweb.com/calibrating-a-single-phase-energy-meter-based-on-the-ade7953/
+ * https://ez.analog.com/energy-metering/f/q-a/31166/ade7953-calibration-read-value-step-by-step
+ * 
+ * Calibration info:
  * Tasmota:
  * "rms":{"current_a":4194303,"current_b":4194303,"voltage":1613194}
  * "angles":{"angle0":200,"angle1":200}
@@ -22,25 +36,6 @@ extern "C" {
  * 	"reactive":{"a":2723574,"b":2723574}
  * }
 */
-
-// ##################################### BUILD definitions #########################################
-
-#define	ade7953STORAGE_KEY			"ade7953"
-#define ade7953_NUM_CONFIGS			4					// sets of calibration parameters stored in NVS
-
-#if	(ade7953USE_CH2 > 0)
-	#define ade7953NUM_SEN24		(7+7+1)
-	#define ade7953NUM_SEN16		(2+2+1)
-#else
-	#define ade7953NUM_SEN24		(7+1)
-	#define ade7953NUM_SEN16		(2+1)
-#endif
-
-#define ADE7953_PREF				1540				// 4194304 / (1540 / 1000) = 2723574 (= WGAIN, VAGAIN and VARGAIN)
-#define ADE7953_UREF				26000				// 4194304 / (26000 / 10000) = 1613194 (= VGAIN)
-#define ADE7953_IREF				10000				// 4194304 / (10000 / 10000) = 4194303 (= IGAIN, needs to be different than 4194304 in order to use calib.dat)
-#define ade7953_NOLOAD_10W			58393				// default
-#define ade7953_NOLOAD_5W			29196				// more sensitive
 
 // ######################################### 8bit registers ########################################
 #define regSAGCYC			0x000		// rw	u8	0		Sag line cycles
@@ -149,7 +144,29 @@ extern "C" {
 #define regVERSION			0x702		// ro	u8	??
 #define regEX_REF			0x800		// rw	u8	0
 
+// ##################################### BUILD definitions #########################################
+
+#define	ade7953STORAGE_KEY			"ade7953"
+#define ade7953_NUM_CONFIGS			4					// sets of calibration parameters stored in NVS
+
+#if	(ade7953USE_CH2 > 0)
+	#define ade7953NUM_SEN24		(7+7+1)
+	#define ade7953NUM_SEN16		(2+2+1)
+#else
+	#define ade7953NUM_SEN24		(7+1)
+	#define ade7953NUM_SEN16		(2+1)
+#endif
+
+#define ADE7953_PREF				1540				// 4194304 / (1540 / 1000) = 2723574 (= WGAIN, VAGAIN and VARGAIN)
+#define ADE7953_UREF				26000				// 4194304 / (26000 / 10000) = 1613194 (= VGAIN)
+#define ADE7953_IREF				10000				// 4194304 / (10000 / 10000) = 4194303 (= IGAIN, needs to be different than 4194304 in order to use calib.dat)
+#define ade7953_NOLOAD_10W			58393				// default
+#define ade7953_NOLOAD_5W			29196				// more sensitive
+
 #define regCONFIG_SWRST		(1 << 7)
+
+#define ade7953LSB_PER_WATTSEC		2.5
+#define ade7953POWER_CORRECTION		23.41494
 
 // ######################################## Enumerations ###########################################
 
@@ -228,27 +245,27 @@ DUMB_STATIC_ASSERT(sizeof(ade7953_accmode_t) == 3);
 
 typedef union {						// 24bit IRQENA / IRQSTATA registers
 	struct __attribute__((packed)) {
-		u8_t	AEHFA : 1;			// LSB
+		u8_t	AEHFA : 1;			// Byte 0-0 (LSB)
 		u8_t	VAREHFA : 1;
 		u8_t	VAEHFA : 1;
 		u8_t	AEOFA : 1;
-		u8_t	VAREOFA : 1;
+		u8_t	VAREOFA : 1;		// Byte 0-4
 		u8_t	VAEOFA : 1;
 		u8_t	AP_NOLOADA : 1;
 		u8_t	VAR_NOLOADA : 1;
-		u8_t	VA_NOLOADA : 1;
+		u8_t	VA_NOLOADA : 1;		// Byte 1-0
 		u8_t	APSIGN_A : 1;
 		u8_t	VARSIGN_A : 1;
 		u8_t	ZXTO_IA: 1;
-		u8_t	ZXIA : 1;
+		u8_t	ZXIA : 1;			// Byte 1-4
 		u8_t	OIA : 1;
 		u8_t	ZXTO : 1;
 		u8_t	ZXV : 1;
-		u8_t	OV : 1;
+		u8_t	OV : 1;				// Byte 2-0
 		u8_t	WSMP : 1;
 		u8_t	CYCEND : 1;
 		u8_t	SAG : 1;
-		u8_t	RESET : 1;
+		u8_t	RESET : 1;			// Byte 2-4
 		u8_t	CRC : 1;
 		u8_t	SPARE : 2;			// MSB
 	};
@@ -311,7 +328,7 @@ typedef union ade7953_ofst_x_t {	// 3x 24bit
 DUMB_STATIC_ASSERT(sizeof(ade7953_ofst_x_t) == 9);
 
 struct i2c_di_t;
-typedef struct __attribute__((packed)) {
+typedef struct __attribute__((packed)) ade7953_t {
 	struct i2c_di_t * psI2C;
 	void (*cb)(void *);
 	// ### Status registers ###
@@ -324,25 +341,30 @@ typedef struct __attribute__((packed)) {
 	ade7953_altout_t alt_out;		// 2
 	ade7953_cfgdnl_t cfgdnl;		// 1
 	ade7953_cfglcm_t cfglcm;		// 1
-	ade7953_accmode_t accmode;		// 3
 	ade7953_valdnl_t valdnl;		// 9
+	ade7953_accmode_t accmode;		// 3
 	ade7953_ofst_x_t ofst;			// 9
 	ade7953_pga_x_t pga;			// 3
 	u8_t ver;
-	ade7953_calib_t calib[ade7953NUM_CHAN];
+	union __attribute__((packed)) { 
+		u8_t flag; 
+		struct __attribute__((packed)) { u8_t f_acc_read:1; u8_t f_spare:1; }; 
+	};
+//	ade7953_calib_t calib[ade7953NUM_CHAN];
+	ade7953_calib_t calib[];
 } ade7953_t;
 
 typedef struct ade7953_defaults_t {	// contain values to be used for [initial] config
 	i32_t cal[6]; 
 	i32_t dnl[3];
+	f32_t Vgain;
+	f32_t Vofst;
+	f32_t Vscale;
 	f32_t Iscale[ade7953NUM_CHAN];
 	f32_t Iofst[ade7953NUM_CHAN];
 	f32_t Igain[ade7953NUM_CHAN];
 	f32_t Pscale[ade7953NUM_CHAN];
 	f32_t Escale[ade7953NUM_CHAN];
-	f32_t Vscale;
-	f32_t Vofst;
-	f32_t Vgain;
 } ade7953_defaults_t;
 
 // ####################################### Global variables ########################################
@@ -358,12 +380,23 @@ int ade7953Write(ade7953_t * psADE7953, u16_t Reg, void * pV);
 int ade7953WriteValue(ade7953_t * psADE7953, u16_t Reg, void * pV, i32_t I32);
 int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pV);
 int ade7953ReadValue(ade7953_t * psADE7953, u16_t Reg, void * pV, i32_t * pI32, bool bSign);
-u16_t ade7953ReadConfig(ade7953_t * psADE7953);
 int ade7953Update(ade7953_t * psADE7953, u16_t Reg, void * pV, u32_t ANDmask, u32_t ORmask);
+
+u16_t ade7953ReadConfig(ade7953_t * psADE7953);
+int ade7953SoftReset(ade7953_t * psADE7953);
+
+int ade7953ChangeIntMask(ade7953_t * psADE7953, int eCh, u32_t maskAND, u32_t maskOR);
+void ade7953IntConfig(int DevIdx);
+
+int	ade7953LoadNVSCalib(u8_t Idx);
+int ade7953SetOffset(ade7953_t * psADE7953);
+int ade7953SetGain(ade7953_t * psADE7953);
+int ade7953SetNoLoadLevel(ade7953_t * psADE7953);
+int	ade7953SetCalibration(ade7953_t * psADE7953, u8_t eCh);
 
 int	ade7953Identify(struct i2c_di_t * psI2C);
 int ade7953Config(struct i2c_di_t * psI2C);
-int	ade7953LoadNVSCalib(u8_t Idx);
+
 struct report_t;
 int ade7953ReportConfig(struct report_t * psRprt, ade7953_t * psADE7953);
 int ade7953ReportCalib(struct report_t * psRprt, ade7953_t * psADE7953);
