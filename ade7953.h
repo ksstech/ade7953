@@ -1,6 +1,4 @@
-/*
- * ade7953.h - Copyright (c) 2023-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
- */
+// ade7953.h
 
 #pragma		once
 
@@ -11,13 +9,13 @@
 extern "C" {
 #endif
 
-/* 
+/*
  * Source code examples:
  * https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_xnrg_energy/xnrg_07_ade7953.ino
  * https://github.com/mongoose-os-libs/ade7953
  * https://github.com/esphome/esphome/tree/dev/esphome/components/ade7953
  * https://github.com/MacWyznawca/ADE7953_ESP8266/blob/master/ADE7953_ESP82.c
- * 
+ *
  * References:
  * https://electronics.stackexchange.com/questions/662549/ade7953-voltage-input
  * https://devices.esphome.io/devices/Shelly-Plus-2PM
@@ -25,7 +23,7 @@ extern "C" {
  * https://esphome.io/components/sensor/ade7953.html
  * https://www.eeweb.com/calibrating-a-single-phase-energy-meter-based-on-the-ade7953/
  * https://ez.analog.com/energy-metering/f/q-a/31166/ade7953-calibration-read-value-step-by-step
- * 
+ *
  * Calibration info:
  * Tasmota:
  * "rms":{"current_a":4194303,"current_b":4194303,"voltage":1613194}
@@ -67,7 +65,7 @@ extern "C" {
 #define regANGLE_A			0x10C		// ro	i16	0		Angle between the voltage input and the Current0 input
 #define regANGLE_B			0x10D		// ro	i16	0		Angle between the voltage input and the Current1 input
 #define regPERIOD			0x10E		// ro	u16	0		Period/frequency register
-#define regALT_OUTPUT		0x110		// rw	u16	0		
+#define regALT_OUTPUT		0x110		// rw	u16	0
 
 #define regOPTIMUM			0x120		// rw	u16	0		This register should be set to 30h to meet the performance specified in Table 1. To modify this register, it must be unlocked by setting Register Address 0xFE to 0xAD immediately prior
 
@@ -236,7 +234,7 @@ typedef union {						// 24bit ACCumulator Mode
 	u8_t avarsign:1;	u8_t bvarsign:1;
 	u8_t rsvd1:2;
 	u8_t aactnl:1;		u8_t avanl:1;		u8_t avarnl:1;
-	u8_t bactnl:1;		u8_t bvanl:1;		u8_t bvarnl:1;		
+	u8_t bactnl:1;		u8_t bvanl:1;		u8_t bvarnl:1;
 	u8_t rsvd2:2;
 	};
 	x24_t val;
@@ -346,16 +344,16 @@ typedef struct __attribute__((packed)) ade7953_t {
 	ade7953_ofst_x_t ofst;			// 9
 	ade7953_pga_x_t pga;			// 3
 	u8_t ver;
-	union __attribute__((packed)) { 
-		u8_t flag; 
-		struct __attribute__((packed)) { u8_t f_acc_read:1; u8_t f_spare:1; }; 
+	union __attribute__((packed)) {
+		u8_t flag;
+		struct __attribute__((packed)) { u8_t f_acc_read:1; u8_t f_spare:1; };
 	};
 //	ade7953_calib_t calib[ade7953NUM_CHAN];
 	ade7953_calib_t calib[];
 } ade7953_t;
 
 typedef struct ade7953_defaults_t {	// contain values to be used for [initial] config
-	i32_t cal[6]; 
+	i32_t cal[6];
 	i32_t dnl[3];
 	f32_t Vgain;
 	f32_t Vofst;
@@ -370,7 +368,7 @@ typedef struct ade7953_defaults_t {	// contain values to be used for [initial] c
 // ####################################### Global variables ########################################
 
 extern u8_t NumADE7953;
-extern ade7953_t sADE7953[halHAS_ADE7953];
+extern ade7953_t sADE7953[HAL_ADE7953];
 extern const ade7953_defaults_t sADE7953Defaults;
 
 // ####################################### Global functions ########################################

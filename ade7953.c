@@ -4,7 +4,7 @@
 
 #include "hal_config.h"
 
-#if (halHAS_ADE7953 > 0)
+#if (HAL_ADE7953 > 0)
 #include "ade7953.h"
 #include "hal_i2c_common.h"
 #include "hal_options.h"
@@ -33,7 +33,7 @@
 
 //				V_Ofst		I_Ofst		V_Scale		Iscale		Pscale		Escale
 //	ESPhome								26000.0		100000.0	154.0		????
-//	TasMota								26000.0		100000.0	154.0					
+//	TasMota								26000.0		100000.0	154.0
 //	Mongoose	-0.068		-0.017		26137.0		105318.59	164.0		25240.0
 
 #define	V_Ofst	-0.068
@@ -86,7 +86,7 @@ static ade7953_defaults_t sADE7953CfgBuf;
 // ####################################### Public variables ########################################
 
 u8_t NumADE7953;
-ade7953_t sADE7953[halHAS_ADE7953];	
+ade7953_t sADE7953[HAL_ADE7953];
 
 // ############################### common support routines #########################################
 
@@ -243,7 +243,7 @@ void IRAM_ATTR ade7953IntCB(void * Arg) {
  * @return
  **/
 void IRAM_ATTR ade7953IntHandler(void * Arg) {
-	IF_myASSERT(debugPARAM, (int) Arg < halHAS_ADE7953);
+	IF_myASSERT(debugPARAM, (int) Arg < HAL_ADE7953);
 	PTL(); ade7953_t * psADE7953 = &sADE7953[(int) Arg];
 
 	#if(ade7953USE_CH2 == 0)
@@ -337,7 +337,7 @@ int ade7953SetGain(ade7953_t * psADE7953) {
 }
 
 /**
- * @brief	
+ * @brief
 */
 int ade7953SetNoLoadLevel(ade7953_t * psADE7953) {
 	static u8_t const cDisable = 0x07;
@@ -355,7 +355,7 @@ int ade7953SetNoLoadLevel(ade7953_t * psADE7953) {
 }
 
 /**
- * @brief	
+ * @brief
  * @return
 */
 int	ade7953SetCalibration(ade7953_t * psADE7953, u8_t eCh) {
@@ -433,7 +433,7 @@ int ade7953Config(i2c_di_t * psI2C) {
 
 	iRV = ade7953SetCalibration(psADE7953, 0);			// #2-Tasmota
 	if (iRV < erSUCCESS) goto exit;
-	
+
 	#if	(ade7953USE_CH2 > 0)
 	iRV = ade7953SetCalibration(psADE7953, 1);
 	if (iRV < erSUCCESS) goto exit;
@@ -441,7 +441,7 @@ int ade7953Config(i2c_di_t * psI2C) {
 */
 	iRV = ade7953WriteValue(psADE7953, regLCYCMODE, &psADE7953->cfglcm, 0x40);
 	if (iRV < erSUCCESS) goto exit;
-	// Enable 
+	// Enable
 	iRV = ade7953ChangeIntMask(psADE7953, 0, 0x00FFFFFF, 0x00290000);
 	if (iRV < erSUCCESS) goto exit;
 
@@ -482,7 +482,7 @@ int ade7953ReportConfig(report_t * psR, ade7953_t * psADE7953) {
 		psADE7953->config.CRC_ENABLE, psADE7953->config.SWRST, psADE7953->config.ZXLPF);
 
 	iRV += wprintfx(psR, "REVP_P=%d REVP_CF=%d PFMode=%d HPFen=%d IEB=%d IEA=%d\r\n",
-		psADE7953->config.REVP_PULSE, psADE7953->config.REVP_CF, psADE7953->config.PFMODE, 
+		psADE7953->config.REVP_PULSE, psADE7953->config.REVP_CF, psADE7953->config.PFMODE,
 		psADE7953->config.HPFEN, psADE7953->config.INTENB, psADE7953->config.INTENA);
 
 	// CFMODE
@@ -537,9 +537,9 @@ int ade7953ReportCalib(report_t * psR, ade7953_t * psADE7953) {
 			psADE7953->ofst.v, psADE7953->ofst.ia, psADE7953->ofst.ib);
 
 	// Add reading of registers to update values in buffers
-	iRV += wprintfx(psR, "DNL_X\tAP=x%06X VAR=x%06X VA=x%06X\r\n", 
+	iRV += wprintfx(psR, "DNL_X\tAP=x%06X VAR=x%06X VA=x%06X\r\n",
 		psADE7953->valdnl.AP_NOLOAD, psADE7953->valdnl.VAR_NOLOAD, psADE7953->valdnl.VA_NOLOAD);
-	
+
 	return iRV;
 }
 
@@ -551,7 +551,7 @@ int ade7953ReportIRQs(report_t * psR, ade7953_t * psADE7953) {
 
 	const char caStat1[] = "\tCRC=%d RESET=%d SAG=%d CYCEND=%d WSMP=%d OV=%d ZXV=%d ZXTO=%d\r\n";
 	iRV += wprintfx(psR, caStat1, psADE7953->is_a.CRC, psADE7953->is_a.RESET,
-		psADE7953->is_a.SAG, psADE7953->is_a.CYCEND, psADE7953->is_a.WSMP, 
+		psADE7953->is_a.SAG, psADE7953->is_a.CYCEND, psADE7953->is_a.WSMP,
 		psADE7953->is_a.OV, psADE7953->is_a.ZXV, psADE7953->is_a.ZXTO);
 
 	const char caStat2[] = "\tSTAT:\tOIx=%d ZXIx=%d ZXTO_Ix=%d VARSIGNx=%d APSIGNx=%d VA_NLx=%d VAR_NLx=%d ";
@@ -585,7 +585,7 @@ int ade7953ReportAdjust(report_t * psR, ade7953_t * psADE7953) { return erFAILUR
 
 int ade7953Report(report_t * psR) {
 	int iRV = PX("## ADE7953 ##\r\n");
-	for (int i = 0; i < halHAS_ADE7953; ++i) {
+	for (int i = 0; i < HAL_ADE7953; ++i) {
 		ade7953_t * psADE7953 = &sADE7953[i];
 		iRV += halI2C_DeviceReport(psR, psADE7953->psI2C);
 		iRV += ade7953ReportConfig(psR, psADE7953);
@@ -595,4 +595,4 @@ int ade7953Report(report_t * psR) {
 	}
 	return iRV;
 }
-#endif	// halHAS_ADE7953
+#endif	// HAL_ADE7953
