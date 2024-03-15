@@ -1,6 +1,6 @@
 // ade7953.c - Copyright (c) 2023-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
-#include "hal_config.h"
+#include "hal_platform.h"
 
 #if (HAL_ADE7953 > 0)
 #include "ade7953.h"
