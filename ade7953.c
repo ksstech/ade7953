@@ -288,7 +288,7 @@ void ade7953IntConfig(int DevIdx) {
 int ade7953LoadNVSCalib(u8_t Idx) {
 	IF_myASSERT(debugPARAM, Idx < ade7953_NUM_CONFIGS);
 	size_t Size = ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t);
-	ade7953_defaults_t * psCal = pvRtosMalloc(Size);
+	ade7953_defaults_t * psCal = malloc(Size);
 	int iRV = halSTORAGE_ReadBlob(halSTORAGE_STORE, ade7953STORAGE_KEY, psCal, &Size, ESP_ERR_NVS_NOT_FOUND);
 	if ((iRV != erSUCCESS) || (Size != (ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t)))) {
 		memset(psCal, 0, Size = ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t));// Clear blob memory
