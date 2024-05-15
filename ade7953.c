@@ -5,6 +5,7 @@
 #if (HAL_ADE7953 > 0)
 #include "ade7953.h"
 #include "hal_i2c_common.h"
+#include "hal_memory.h"
 #include "hal_options.h"
 #include "hal_storage.h"
 #include "printfx.h"
@@ -128,7 +129,7 @@ i32_t ade7953CalcSign(i32_t I32, int Size) {
  * @return	number of data bytes written (if no error) or error code
 */
 int ade7953Write(ade7953_t * psADE7953, u16_t Reg, void * pV) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953) && halCONFIG_inMEM(pV));
+	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953) && halMEM_AddrInANY(pV));
 	int Size = ade7953CalcRegSize(Reg);
 	u8_t caBuf[6] = { (Reg >> 8) & 0xFF, Reg & 0xFF };
 	memcpy(&caBuf[2], pV, Size);						// Add register content to address in buffer
