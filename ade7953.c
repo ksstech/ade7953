@@ -7,7 +7,7 @@
 #include "hal_i2c_common.h"
 #include "hal_memory.h"
 #include "hal_options.h"
-#include "hal_storage.h"
+#include "hal_flash.h"
 #include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"					// timing debugging
@@ -129,7 +129,7 @@ i32_t ade7953CalcSign(i32_t I32, int Size) {
  * @return	number of data bytes written (if no error) or error code
 */
 int ade7953Write(ade7953_t * psADE7953, u16_t Reg, void * pV) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953) && halMEM_AddrInANY(pV));
+	IF_myASSERT(debugPARAM, halMemorySRAM(psADE7953) && halMemoryANY(pV));
 	int Size = ade7953CalcRegSize(Reg);
 	u8_t caBuf[6] = { (Reg >> 8) & 0xFF, Reg & 0xFF };
 	memcpy(&caBuf[2], pV, Size);						// Add register content to address in buffer
@@ -146,7 +146,7 @@ int ade7953Write(ade7953_t * psADE7953, u16_t Reg, void * pV) {
  * @return	number of data bytes written (if no error) or error code
 */
 int ade7953WriteValue(ade7953_t * psADE7953, u16_t Reg, void * pV, i32_t I32) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953));
+	IF_myASSERT(debugPARAM, halMemorySRAM(psADE7953));
 	int Size = ade7953CalcRegSize(Reg);
 	u8_t caBuf[4];
 	int Len = 0;
@@ -160,7 +160,7 @@ int ade7953WriteValue(ade7953_t * psADE7953, u16_t Reg, void * pV, i32_t I32) {
  * @return	number of data bytes read (register length) or error code
 */
 int ade7953Read(ade7953_t * psADE7953, u16_t Reg, void * pV) {
-	IF_myASSERT(debugPARAM, halCONFIG_inSRAM(psADE7953) && halCONFIG_inSRAM(pV));
+	IF_myASSERT(debugPARAM, halMemorySRAM(psADE7953) && halMemorySRAM(pV));
 	u8_t caBuf[2] = { (Reg >> 8) & 0xFF,  Reg & 0xFF };
 	int Size = ade7953CalcRegSize(Reg);
 
@@ -290,11 +290,11 @@ int ade7953LoadNVSCalib(u8_t Idx) {
 	IF_myASSERT(debugPARAM, Idx < ade7953_NUM_CONFIGS);
 	size_t Size = ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t);
 	ade7953_defaults_t * psCal = malloc(Size);
-	int iRV = halSTORAGE_ReadBlob(halSTORAGE_STORE, ade7953STORAGE_KEY, psCal, &Size, ESP_ERR_NVS_NOT_FOUND);
+	int iRV = halFlashReadBlob(halFLASH_STORE, ade7953STORAGE_KEY, psCal, &Size, ESP_ERR_NVS_NOT_FOUND);
 	if ((iRV != erSUCCESS) || (Size != (ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t)))) {
 		memset(psCal, 0, Size = ade7953_NUM_CONFIGS * sizeof(ade7953_defaults_t));// Clear blob memory
 		memcpy(psCal, &sADE7953Defaults, sizeof(sADE7953CfgBuf));		// Reset 1st dataset to defaults
-		iRV = halSTORAGE_WriteBlob(halSTORAGE_STORE, ade7953STORAGE_KEY, psCal, Size);
+		iRV = halFlashWriteBlob(halFLASH_STORE, ade7953STORAGE_KEY, psCal, Size);
 		IF_myASSERT(debugRESULT, iRV == erSUCCESS);
 		SL_WARN("NVS config (%d) not found, default created/loaded", Idx);
 		Idx = 0;
