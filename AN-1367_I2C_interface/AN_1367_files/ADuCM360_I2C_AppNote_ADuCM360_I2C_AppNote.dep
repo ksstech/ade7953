@@ -1,29 +1,0 @@
-Dependencies for Project 'ADuCM360_I2C_AppNote', Target 'ADuCM360_I2C_AppNote': (DO NOT MODIFY !)
-F (.\ADuCM360StartUp.s)(0x54CB149C)(--cpu Cortex-M3 -g --apcs=interwork -I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ADI--list .\aducm360startup.lst --xref -o .\debug\aducm360startup.o --depend .\debug\aducm360startup.d)
-F (.\ADuCM360_Regs.c)(0x54CB13E6)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork --asm -o .\debug\aducm360_regs.o --omf_browse .\debug\aducm360_regs.crf --depend .\debug\aducm360_regs.d)
-I (C:\Keil\ARM\ARMCC\include\stdint.h)(0x51C7A934)
-F (.\JongSuLib_V2.c)(0x5449AA92)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork --asm -o .\debug\jongsulib_v2.o --omf_browse .\debug\jongsulib_v2.crf --depend .\debug\jongsulib_v2.d)
-I (C:\Keil\ARM\ARMCC\include\stdint.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\stdarg.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\string.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\ctype.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\stdlib.h)(0x51C7A934)
-I (C:\ADI_Room\ADI_Docs\Fermi_App_Notes\20150614_FromHari\Fermi_AppNote01302015\I2C_AppNote\ADuCM360_Regs.h)(0x54CB13F6)
-I (C:\ADI_Room\ADI_Docs\Fermi_App_Notes\20150614_FromHari\Fermi_AppNote01302015\I2C_AppNote\JongSuLib_V2.h)(0x5449AAAE)
-F (.\ADuCM360_Test_Lib.c)(0x557D53BE)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork --asm -o .\debug\aducm360_test_lib.o --omf_browse .\debug\aducm360_test_lib.crf --depend .\debug\aducm360_test_lib.d)
-I (C:\Keil\ARM\ARMCC\include\stdlib.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\stdint.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\string.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\ctype.h)(0x51C7A934)
-I (C:\ADI_Room\ADI_Docs\Fermi_App_Notes\20150614_FromHari\Fermi_AppNote01302015\I2C_AppNote\ADuCM360_Regs.h)(0x54CB13F6)
-I (C:\ADI_Room\ADI_Docs\Fermi_App_Notes\20150614_FromHari\Fermi_AppNote01302015\I2C_AppNote\JongSuLib_V2.h)(0x5449AAAE)
-I (C:\Keil\ARM\ARMCC\include\stdarg.h)(0x51C7A934)
-I (C:\ADI_Room\ADI_Docs\Fermi_App_Notes\20150614_FromHari\Fermi_AppNote01302015\I2C_AppNote\ADuCM360_Test_Lib.h)(0x54CB140A)
-F (.\ADuCM360_I2C_AppNote.c)(0x54CB13D0)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork --asm -o .\debug\aducm360_i2c_appnote.o --omf_browse .\debug\aducm360_i2c_appnote.crf --depend .\debug\aducm360_i2c_appnote.d)
-I (C:\Keil\ARM\ARMCC\include\stdint.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\string.h)(0x51C7A934)
-I (C:\Keil\ARM\ARMCC\include\ctype.h)(0x51C7A934)
-I (C:\ADI_Room\ADI_Docs\Fermi_App_Notes\20150614_FromHari\Fermi_AppNote01302015\I2C_AppNote\ADuCM360_Regs.h)(0x54CB13F6)
-I (C:\ADI_Room\ADI_Docs\Fermi_App_Notes\20150614_FromHari\Fermi_AppNote01302015\I2C_AppNote\JongSuLib_V2.h)(0x5449AAAE)
-I (C:\Keil\ARM\ARMCC\include\stdarg.h)(0x51C7A934)
-I (C:\ADI_Room\ADI_Docs\Fermi_App_Notes\20150614_FromHari\Fermi_AppNote01302015\I2C_AppNote\ADuCM360_Test_Lib.h)(0x54CB140A)
