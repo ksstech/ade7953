@@ -519,7 +519,7 @@ int ade7953ReportCalib(report_t * psR, ade7953_t * psADE7953) {
 			iRV += wprintfx(psR, "x%0*X\t", ade7953CalcRegSize(Reg) * 2, ade7953CalcRegValue(Reg, pReg));
 			pReg += Size;
 		}
-		iRV += wprintfx(psR, strCRLF);
+		iRV += wprintfx(psR, strNL);
 	}
 
 	ade7953Read(psADE7953, regPGA_V, (void *) &psADE7953->pga.v);
@@ -590,7 +590,7 @@ int ade7953Report(report_t * psR) {
 		iRV += ade7953ReportConfig(psR, psADE7953);
 		iRV += ade7953ReportCalib(psR, psADE7953);
 		iRV += ade7953ReportIRQs(psR, psADE7953);
-		iRV += wprintfx(psR, strCRLF);
+		iRV += wprintfx(psR, strNL);
 	}
 	return iRV;
 }
