@@ -243,7 +243,7 @@ void IRAM_ATTR ade7953IntCB(void * Arg) {
  **/
 void IRAM_ATTR ade7953IntHandler(void * Arg) {
 	IF_myASSERT(debugPARAM, (int) Arg < HAL_ADE7953);
-	PTL(); ade7953_t * psADE7953 = &sADE7953[(int) Arg];
+	PXTL(); ade7953_t * psADE7953 = &sADE7953[(int) Arg];
 
 	#if(ade7953USE_CH2 == 0)
 	psADE7953->cb = &ade7953IRQ_CB;						// schedule Chan-A read with CB handler
