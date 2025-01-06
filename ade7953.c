@@ -446,7 +446,7 @@ int ade7953Config(i2c_di_t * psI2C) {
 
 	iRV = ade7953ReadConfig(psADE7953);
 	if (iRV == 0x0004) {			// 0x8000 must be false, comms must be locked to I2C
-		xRtosSetDevice(devMASK_ADE7953);
+		halEventUpdateDevice(devMASK_ADE7953, 1);
 		psI2C->CFGok = 1;
 		iRV = erSUCCESS;
 	} else {
