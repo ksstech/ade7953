@@ -423,7 +423,7 @@ int ade7953Config(i2c_di_t * psI2C) {
 
 /*
 	// Ensure the selected calibration data loaded from NVS blob
-	ade7953LoadNVSCalib(ioB2GET(ade7953NVS));
+	ade7953LoadNVSCalib(xOptionGet(ade7953NVS));
 	iRV = ade7953SetOffsetGain(psADE7953);				// #1-MGOS
 	if (iRV < erSUCCESS) goto exit;
 
