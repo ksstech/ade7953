@@ -465,43 +465,43 @@ int ade7953ReportConfig(report_t * psR, ade7953_t * psADE7953) {
 	int iRV;
 	// Decode DISNOLOAD
 	ade7953Read(psADE7953, regDISNOLOAD, (void *) &psADE7953->cfgdnl.val);
-	iRV = wprintfx(psR, "DNLOAD\tx%02X\tva=%d  var=%d  ap=%d\r\n", psADE7953->cfgdnl.val,
+	iRV = report(psR, "DNLOAD\tx%02X\tva=%d  var=%d  ap=%d\r\n", psADE7953->cfgdnl.val,
 		psADE7953->cfgdnl.va, psADE7953->cfgdnl.var, psADE7953->cfgdnl.ap);
 	// Decode LCYCMODE
 	ade7953Read(psADE7953, regLCYCMODE, (void *) &psADE7953->cfglcm.val);
-	iRV += wprintfx(psR, "LCMODE\tx%02X\trstr=%d Blva=%d Alva=%d Blvar=%d Alvar=%d Blwatt=%d Alwatt=%d\r\n", psADE7953->cfglcm.val,
+	iRV += report(psR, "LCMODE\tx%02X\trstr=%d Blva=%d Alva=%d Blvar=%d Alvar=%d Blwatt=%d Alwatt=%d\r\n", psADE7953->cfglcm.val,
 		psADE7953->cfglcm.rstr, psADE7953->cfglcm.blva,psADE7953->cfglcm.alva,
 		psADE7953->cfglcm.blvar, psADE7953->cfglcm.alvar, psADE7953->cfglcm.blwatt,
 		psADE7953->cfglcm.alwatt);
 
 	// Decode CONFIG register
 	ade7953Read(psADE7953, regCONFIG, (void *) &psADE7953->config.val);
-	iRV += wprintfx(psR, "CONFIG\tx%04X\tCL=%d ZXE=%d ZXI=%d CRCen=%d SWrst=%d ZXlpf=%d ", psADE7953->config.val,
+	iRV += report(psR, "CONFIG\tx%04X\tCL=%d ZXE=%d ZXI=%d CRCen=%d SWrst=%d ZXlpf=%d ", psADE7953->config.val,
 		psADE7953->config.COMM_LOCK, psADE7953->config.ZX_EDGE, psADE7953->config.ZX_I,
 		psADE7953->config.CRC_ENABLE, psADE7953->config.SWRST, psADE7953->config.ZXLPF);
 
-	iRV += wprintfx(psR, "REVP_P=%d REVP_CF=%d PFMode=%d HPFen=%d IEB=%d IEA=%d\r\n",
+	iRV += report(psR, "REVP_P=%d REVP_CF=%d PFMode=%d HPFen=%d IEB=%d IEA=%d\r\n",
 		psADE7953->config.REVP_PULSE, psADE7953->config.REVP_CF, psADE7953->config.PFMODE,
 		psADE7953->config.HPFEN, psADE7953->config.INTENB, psADE7953->config.INTENA);
 
 	// CFMODE
 	ade7953Read(psADE7953, regCFMODE, (void *) &psADE7953->cfmode.val);
-	iRV += wprintfx(psR, "CFMODE\tx%04X\tCF2dis=%d CF1dis=%d CF2sel=%d CF1sel=%d\r\n", psADE7953->cfmode.val,
+	iRV += report(psR, "CFMODE\tx%04X\tCF2dis=%d CF1dis=%d CF2sel=%d CF1sel=%d\r\n", psADE7953->cfmode.val,
 		psADE7953->cfmode.cf2dis, psADE7953->cfmode.cf1dis, psADE7953->cfmode.cf2sel, psADE7953->cfmode.cf1sel);
 
 	//ALT_OUT
 	ade7953Read(psADE7953, regALT_OUTPUT, (void *) &psADE7953->alt_out.val);
-	iRV += wprintfx(psR, "ALTOUT\tx%04X\trevp=%X zxi=%X zx=%X\r\n", psADE7953->alt_out.val,
+	iRV += report(psR, "ALTOUT\tx%04X\trevp=%X zxi=%X zx=%X\r\n", psADE7953->alt_out.val,
 		psADE7953->alt_out.revp_alt, psADE7953->alt_out.zxi_alt, psADE7953->alt_out.zx_alt);
 
 	// ACCMODE
 	ade7953Read(psADE7953, regACCMODE, (void *) &psADE7953->accmode.val);
-	iRV += wprintfx(psR, "ACCMOD\tx%06X\tBvarnl=%d Bvanl=%d Bactnl=%d Avarnl=%d Avanl=%d Aactnl=%d Bvarsign=%d Avarsign=%d ", psADE7953->accmode.val,
+	iRV += report(psR, "ACCMOD\tx%06X\tBvarnl=%d Bvanl=%d Bactnl=%d Avarnl=%d Avanl=%d Aactnl=%d Bvarsign=%d Avarsign=%d ", psADE7953->accmode.val,
 		psADE7953->accmode.bvarnl, psADE7953->accmode.bvanl, psADE7953->accmode.bactnl,
 		psADE7953->accmode.avarnl, psADE7953->accmode.avanl, psADE7953->accmode.aactnl,
 		psADE7953->accmode.bvarsign, psADE7953->accmode.avarsign);
 
-	iRV += wprintfx(psR, "Bapsign=%d Aapsign=%d Bvaacc=%d Avaacc=%d Bvaracc=%d Avaracc=%d Bwattacc=%d Awattacc=%d\r\n",
+	iRV += report(psR, "Bapsign=%d Aapsign=%d Bvaacc=%d Avaacc=%d Bvaracc=%d Avaracc=%d Bwattacc=%d Awattacc=%d\r\n",
 		psADE7953->accmode.bapsign, psADE7953->accmode.aapsign, psADE7953->accmode.bvaacc,
 		psADE7953->accmode.avaacc, psADE7953->accmode.bvaracc, psADE7953->accmode.avaracc,
 		psADE7953->accmode.bwattacc, psADE7953->accmode.awattacc);
@@ -509,34 +509,34 @@ int ade7953ReportConfig(report_t * psR, ade7953_t * psADE7953) {
 }
 
 int ade7953ReportCalib(report_t * psR, ade7953_t * psADE7953) {
-	int iRV = wprintfx(psR, "ADE7953 Calibration:\r\n\txIGAIN\txVGAIN\txWGAIN xVARGAIN\txVAGAIN\tPHCALx\r\n");
+	int iRV = report(psR, "ADE7953 Calibration:\r\n\txIGAIN\txVGAIN\txWGAIN xVARGAIN\txVAGAIN\tPHCALx\r\n");
 	for (int eCh = 0; eCh < ade7953NUM_CHAN; ++eCh) {
-		iRV += wprintfx(psR, "Chan%c\t", eCh + CHR_A);
+		iRV += report(psR, "Chan%c\t", eCh + CHR_A);
 		u8_t * pReg = psADE7953->calib[eCh].buf;
 		for( int i = 0; i < NO_ELEM(ade7953_defaults_t, cal); ++i) {
 			int Reg = aRegCFG[eCh][i];
 			int Size = ade7953Read(psADE7953, Reg, (void *) pReg);
-			iRV += wprintfx(psR, "x%0*X\t", ade7953CalcRegSize(Reg) * 2, ade7953CalcRegValue(Reg, pReg));
+			iRV += report(psR, "x%0*X\t", ade7953CalcRegSize(Reg) * 2, ade7953CalcRegValue(Reg, pReg));
 			pReg += Size;
 		}
-		iRV += wprintfx(psR, strNL);
+		iRV += report(psR, strNL);
 	}
 
 	ade7953Read(psADE7953, regPGA_V, (void *) &psADE7953->pga.v);
 	ade7953Read(psADE7953, regPGA_IA, (void *) &psADE7953->pga.ia);
 	ade7953Read(psADE7953, regPGA_IB, (void *) &psADE7953->pga.ib);
 	const u8_t xlatPGA[6] = { 1, 2, 4, 8, 16, 22 };
-	iRV += wprintfx(psR, "PGA_X\tV=%d/%d  IA=%d/%d  IB=%d/%d\r\n", psADE7953->pga.v, xlatPGA[psADE7953->pga.v],
+	iRV += report(psR, "PGA_X\tV=%d/%d  IA=%d/%d  IB=%d/%d\r\n", psADE7953->pga.v, xlatPGA[psADE7953->pga.v],
 	psADE7953->pga.ia, xlatPGA[psADE7953->pga.ia], psADE7953->pga.ib, xlatPGA[psADE7953->pga.ib]);
 
 	ade7953Read(psADE7953, regVRMSOS, (void *) &psADE7953->ofst.v);
 	ade7953Read(psADE7953, regAIRMSOS, (void *) &psADE7953->ofst.ia);
 	ade7953Read(psADE7953, regBIRMSOS, (void *) &psADE7953->ofst.ib);
-	iRV += wprintfx(psR, "OFST_X\tV=x%06X  IA=x%06X  IB=x%06X\r\n",
+	iRV += report(psR, "OFST_X\tV=x%06X  IA=x%06X  IB=x%06X\r\n",
 			psADE7953->ofst.v, psADE7953->ofst.ia, psADE7953->ofst.ib);
 
 	// Add reading of registers to update values in buffers
-	iRV += wprintfx(psR, "DNL_X\tAP=x%06X VAR=x%06X VA=x%06X\r\n",
+	iRV += report(psR, "DNL_X\tAP=x%06X VAR=x%06X VA=x%06X\r\n",
 		psADE7953->valdnl.AP_NOLOAD, psADE7953->valdnl.VAR_NOLOAD, psADE7953->valdnl.VA_NOLOAD);
 
 	return iRV;
@@ -546,19 +546,19 @@ int ade7953ReportIRQs(report_t * psR, ade7953_t * psADE7953) {
 	// Decode IRQA registers
 	ade7953Read(psADE7953, regIRQENA, (void *) psADE7953->ie_a.u8);
 	ade7953Read(psADE7953, regIRQSTATA, (void *) psADE7953->is_a.u8);
-	int iRV = wprintfx(psR, "IRQ_A\tEN=x%06X\tSTAT=x%06X", psADE7953->ie_a.val, psADE7953->is_a.val);
+	int iRV = report(psR, "IRQ_A\tEN=x%06X\tSTAT=x%06X", psADE7953->ie_a.val, psADE7953->is_a.val);
 
 	const char caStat1[] = "\tCRC=%d RESET=%d SAG=%d CYCEND=%d WSMP=%d OV=%d ZXV=%d ZXTO=%d\r\n";
-	iRV += wprintfx(psR, caStat1, psADE7953->is_a.CRC, psADE7953->is_a.RESET,
+	iRV += report(psR, caStat1, psADE7953->is_a.CRC, psADE7953->is_a.RESET,
 		psADE7953->is_a.SAG, psADE7953->is_a.CYCEND, psADE7953->is_a.WSMP,
 		psADE7953->is_a.OV, psADE7953->is_a.ZXV, psADE7953->is_a.ZXTO);
 
 	const char caStat2[] = "\tSTAT:\tOIx=%d ZXIx=%d ZXTO_Ix=%d VARSIGNx=%d APSIGNx=%d VA_NLx=%d VAR_NLx=%d ";
-	iRV += wprintfx(psR, caStat2, psADE7953->is_a.OIA, psADE7953->is_a.ZXIA, psADE7953->is_a.ZXTO_IA,
+	iRV += report(psR, caStat2, psADE7953->is_a.OIA, psADE7953->is_a.ZXIA, psADE7953->is_a.ZXTO_IA,
 		psADE7953->is_a.VARSIGN_A, psADE7953->is_a.APSIGN_A, psADE7953->is_a.VA_NOLOADA, psADE7953->is_a.VAR_NOLOADA);
 
 	const char caStat3[] = "AP_NLx=%d VAEOFx=%d VAREOFx=%d AEOFx=%d VAEHFx=%d VAREHFx=%d AEHFx=%d\r\n";
-	iRV += wprintfx(psR, caStat3, psADE7953->is_a.AP_NOLOADA, psADE7953->is_a.VAEOFA, psADE7953->is_a.VAREOFA,
+	iRV += report(psR, caStat3, psADE7953->is_a.AP_NOLOADA, psADE7953->is_a.VAEOFA, psADE7953->is_a.VAREOFA,
 		 psADE7953->is_a.AEOFA, psADE7953->is_a.VAEHFA, psADE7953->is_a.VAREHFA, psADE7953->is_a.AEHFA);
 
 
@@ -566,12 +566,12 @@ int ade7953ReportIRQs(report_t * psR, ade7953_t * psADE7953) {
 	// Decode IRQB registers
 	ade7953Read(psADE7953, regIRQENB, (void *) psADE7953->ie_b.u8);
 	ade7953Read(psADE7953, regIRQSTATB, (void *) psADE7953->is_b.u8);
-	iRV += wprintfx(psR, "IRQ_B\tEN=x%06X\tSTAT=x%06X\r\n", psADE7953->ie_b.val, psADE7953->is_b.val);
+	iRV += report(psR, "IRQ_B\tEN=x%06X\tSTAT=x%06X\r\n", psADE7953->ie_b.val, psADE7953->is_b.val);
 
-	iRV += wprintfx(psR, caStat2, psADE7953->is_b.OIB, psADE7953->is_b.ZXIB, psADE7953->is_b.ZXTO_IB,
+	iRV += report(psR, caStat2, psADE7953->is_b.OIB, psADE7953->is_b.ZXIB, psADE7953->is_b.ZXTO_IB,
 		psADE7953->is_b.VARSIGN_B, psADE7953->is_b.APSIGN_B, psADE7953->is_b.VA_NOLOADB, psADE7953->is_b.VAR_NOLOADB);
 
-	iRV += wprintfx(psR, caStat3, psADE7953->is_b.AP_NOLOADB, psADE7953->is_b.VAEOFB, psADE7953->is_b.VAREOFB,
+	iRV += report(psR, caStat3, psADE7953->is_b.AP_NOLOADB, psADE7953->is_b.VAEOFB, psADE7953->is_b.VAREOFB,
 		 psADE7953->is_b.AEOFB, psADE7953->is_b.VAEHFB, psADE7953->is_b.VAREHFB, psADE7953->is_b.AEHFB);
 
 	#endif
@@ -590,7 +590,7 @@ int ade7953Report(report_t * psR) {
 		iRV += ade7953ReportConfig(psR, psADE7953);
 		iRV += ade7953ReportCalib(psR, psADE7953);
 		iRV += ade7953ReportIRQs(psR, psADE7953);
-		iRV += wprintfx(psR, strNL);
+		iRV += report(psR, strNL);
 	}
 	return iRV;
 }
