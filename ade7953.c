@@ -6,9 +6,7 @@
 #include "ade7953.h"
 #include "hal_i2c_common.h"
 #include "hal_memory.h"
-#include "hal_options.h"
 #include "hal_flash.h"
-#include "report.h"
 #include "syslog.h"
 #include "systiming.h"					// timing debugging
 #include "errors_events.h"
