@@ -1,4 +1,4 @@
-// ade7953.c - Copyright (c) 2023-24 Andre M. Maree / KSS Technologies (Pty) Ltd.
+// ade7953.c - Copyright (c) 2023-25 Andre M. Maree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 
@@ -25,7 +25,9 @@
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
 // ########################################### Macros ##############################################
+
 // ######################################### Structures ############################################
+
 // ####################################### Private variables #######################################
 
 //				V_Ofst		I_Ofst		V_Scale		Iscale		Pscale		Escale
@@ -49,7 +51,7 @@ static const u16_t aRegCFG[ade7953NUM_CHAN][6] = {
 	#endif
 };
 
-static const u16_t aRegDNL[3] = {regAP_NOLOAD, regVAR_NOLOAD, regVA_NOLOAD };
+static const u16_t aRegDNL[3] = { regAP_NOLOAD, regVAR_NOLOAD, regVA_NOLOAD };
 
 // ######################################### Structures ############################################
 
@@ -136,7 +138,7 @@ int ade7953Write(ade7953_t * psADE7953, u16_t Reg, void * pV) {
 	IF_EXEC_1(debugTIMING, xSysTimerStop, stADE7953W);
 	if ((iRV < erSUCCESS) && !(Reg == regCONFIG && (caBuf[2] & regCONFIG_SWRST)))
 		SL_ERR("Error Reg=0x%X iRV=%d", Reg, iRV);
-	return iRV < erSUCCESS ? iRV : Size;
+	return (iRV < erSUCCESS) ? iRV : Size;
 }
 
 /**
@@ -396,7 +398,8 @@ int	ade7953Identify(i2c_di_t * psI2C) {
  * @return
  */
 int ade7953Config(i2c_di_t * psI2C) {
-	if (!psI2C->IDok) return erINV_STATE;
+	if (!psI2C->IDok)
+		return erINV_STATE;
 	psI2C->CFGok = 0;
 
 	if (!psI2C->CFGerr) {								// if 1st time here, not recall ARO an error
@@ -406,42 +409,44 @@ int ade7953Config(i2c_di_t * psI2C) {
 
 	ade7953_t * psADE7953 = &sADE7953[psI2C->DevIdx];
 	int iRV = ade7953SoftReset(psADE7953);
-	if (iRV < erSUCCESS) goto exit;
-
+	if (iRV < erSUCCESS)
+		goto exit;
 	iRV = ade7953WriteValue(psADE7953, regCONFIG, &psADE7953->config.val, 0x0004);	// Lock comms, enable HPF
-	if (iRV < erSUCCESS) goto exit;
-
+	if (iRV < erSUCCESS)
+		goto exit;
 	iRV = ade7953WriteValue(psADE7953, regUNLOCK, NULL, 0xAD);		// Unlock reg 0x0120
-	if (iRV < erSUCCESS) goto exit;
-
+	if (iRV < erSUCCESS)
+		goto exit;
 	iRV = ade7953WriteValue(psADE7953, regOPTIMUM, NULL, 0x0030);	// enable optimum settings
-	if (iRV < erSUCCESS) goto exit;
-
+	if (iRV < erSUCCESS)
+		goto exit;
 // ##################################### Accuracy calibration ######################################
 
 /*
 	// Ensure the selected calibration data loaded from NVS blob
 	ade7953LoadNVSCalib(xOptionGet(ade7953NVS));
 	iRV = ade7953SetOffsetGain(psADE7953);				// #1-MGOS
-	if (iRV < erSUCCESS) goto exit;
-
+	if (iRV < erSUCCESS)
+		goto exit;
 	iRV = ade7953SetNoLoadLevel(psADE7953);				// #1-Tasmota
-	if (iRV < erSUCCESS) goto exit;
-
+	if (iRV < erSUCCESS)
+		goto exit;
 	iRV = ade7953SetCalibration(psADE7953, 0);			// #2-Tasmota
-	if (iRV < erSUCCESS) goto exit;
-
+	if (iRV < erSUCCESS)
+		goto exit;
 	#if	(ade7953USE_CH2 > 0)
-	iRV = ade7953SetCalibration(psADE7953, 1);
-	if (iRV < erSUCCESS) goto exit;
+		iRV = ade7953SetCalibration(psADE7953, 1);
+		if (iRV < erSUCCESS)
+			goto exit;
 	#endif
 */
 	iRV = ade7953WriteValue(psADE7953, regLCYCMODE, &psADE7953->cfglcm, 0x40);
-	if (iRV < erSUCCESS) goto exit;
+	if (iRV < erSUCCESS)
+		goto exit;
 	// Enable
 	iRV = ade7953ChangeIntMask(psADE7953, 0, 0x00FFFFFF, 0x00290000);
-	if (iRV < erSUCCESS) goto exit;
-
+	if (iRV < erSUCCESS)
+		goto exit;
 	iRV = ade7953ReadConfig(psADE7953);
 	if (iRV == 0x0004) {			// 0x8000 must be false, comms must be locked to I2C
 		halEventUpdateDevice(devMASK_ADE7953, 1);
@@ -455,7 +460,6 @@ exit:
 }
 
 // ###################################### general support ##########################################
-
 
 // ############################### device reporting functions ######################################
 
