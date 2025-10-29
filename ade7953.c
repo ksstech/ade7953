@@ -150,10 +150,12 @@ int ade7953WriteValue(ade7953_t * psADE7953, u16_t Reg, void * pV, i32_t I32) {
 	int Size = ade7953CalcRegSize(Reg);
 	u8_t caBuf[4];
 	int Len = 0;
-	if (pV) memcpy(pV, caBuf, Len);								// Update local memory store
-	return ade7953Write(psADE7953, Reg, caBuf);
 	while (Size--)
 		caBuf[Len++] = (I32 >> (8 * Size)) & 0xFF;		// correct BE -> LE conversion
+	int iRV = ade7953Write(psADE7953, Reg, caBuf);
+	if (pV && iRV > erFAILURE)
+		memcpy(pV, caBuf, Len);							// Update local memory store
+	return iRV;
 }
 
 /**
