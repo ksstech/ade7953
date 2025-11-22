@@ -321,7 +321,6 @@ DUMB_STATIC_ASSERT(sizeof(ade7953_calib_t) == 17);
 typedef union ade7953_ofst_x_t {	// 3x 24bit
 	struct __attribute__((packed)) { x24_t v; x24_t ia; x24_t ib; };
 	x24_t regs[3];
-//	u8_t buf[sizeof(struct ade7953_ofst_x_s)];
 } ade7953_ofst_x_t;
 DUMB_STATIC_ASSERT(sizeof(ade7953_ofst_x_t) == 9);
 
@@ -348,7 +347,6 @@ typedef struct __attribute__((packed)) ade7953_t {
 		u8_t flag;
 		struct __attribute__((packed)) { u8_t f_acc_read:1; u8_t f_spare:1; };
 	};
-//	ade7953_calib_t calib[ade7953NUM_CHAN];
 	ade7953_calib_t calib[];
 } ade7953_t;
 
